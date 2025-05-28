@@ -1,0 +1,17 @@
+.nav-link {
+    background-color: #00008b;
+    padding: 10px 15px;
+    color: red;
+    font-size: 20px;
+    border-radius: 5px;
+    text-decoration: none;
+  }
+  
+  .nav-link:visited {
+    color: red;
+  }
+  
+  .nav-link:hover {
+    color: white;
+    background-color: #00008b;
+  }

@@ -2,22 +2,29 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Dashboard from './screens/dashboard';
 import Glygen from './screens/glygen';
+import Vis from './screens/vis';
+import Header from './utils/header';
+import './styles/nav.css'
 
 function App() {
+  
   return (
     <Router>
       <div className="App">
-        <header className="App-header">
-          <nav style={{ display: 'flex', gap: '1rem', padding: '1rem', background: '#f5f5f5' }}>
-            <Link to="/" style={{ textDecoration: 'none' }}>Dashboard</Link>
-            <Link to="/glygen" style={{ textDecoration: 'none' }}>Glygen</Link>
+        <Header>
+          <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
+            <Link to="/" className='nav-link'>Dashboard</Link>
+            <Link to="/glygen" className='nav-link'>Glygen</Link>
+            <Link to="/vis" className='nav-link'>Vis</Link>
           </nav>
-        </header>
+        </Header>
         <main className="App-main">
           <Routes>
+          
             <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />ß
             <Route path="/glygen" element={<Glygen />} />
+            <Route path ="/vis" element={<Vis />} />
           </Routes>
         </main>
       </div>

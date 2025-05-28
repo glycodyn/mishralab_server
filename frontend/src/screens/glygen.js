@@ -42,8 +42,9 @@ function Glygen(){
                 ),    
             });
             const result = await res.json();
-            if(res.ok&&result){
+            if(res.ok){
                 console.log(result);
+
             }
         }catch{}
     }
@@ -58,11 +59,7 @@ function Glygen(){
     
     return(
         <div style={{ padding: '2rem', color: 'black' }}>
-            <header className="dashboard-header">
-                <h1>Ole Miss </h1>
-                <h1>Biomedical Engineering</h1>
-                
-            </header>
+           
             
             <div className="protein-search">
             <h2>Protein Search</h2>

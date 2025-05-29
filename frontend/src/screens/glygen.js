@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import '../styles/dashboard.css';
 
 function Glygen(){
+    const [proteinName, setProteinName] = useState('');
+    const [geneName, setGeneName] = useState('');
+    const [organism, setOrganism] = useState('');
+    const [bioFunction, setBioFunction] = useState('');
     const[uniport, setUniport] = useState('');
     const [info, setInfo] = useState('');
     const [sequence, setSequence] = useState('');
@@ -31,36 +35,51 @@ function Glygen(){
                 console.error('Error fetching data:', res.status);
             }
 
-            if(res2.ok){
-                const data = await res2.json();
-                setPdbId(data.uniProtKBCrossReferences.filter(ref => ref.database === 'PDB').map(ref => ref.id));
-                if (pdbId.length > 0) {
-                    // Load the first PDB ID into 3Dmol
-                    const pdb = pdbId[0];
-                    const pdbRes = await fetch(`https://files.rcsb.org/download/${pdb}.pdb`);
-                    const pdbText = await pdbRes.text();
-            
-                    const viewer = window.$3Dmol.createViewer("viewer", {
-                        defaultcolors: window.$3Dmol.rasmolElementColors,
-                        backgroundColor: 'white'
-                    });
-            
-                    viewer.addModel(pdbText, "pdb");
-                    viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-                    viewer.zoomTo();
-                    viewer.render();
-                }
-            
-            }else{
+            if (res2.ok) {
+              const data = await res2.json();
+          
+              const name = data.proteinDescription?.recommendedName?.fullName?.value || "Unknown";
+              const gene = data.genes?.[0]?.geneName?.value || "N/A";
+              const organism = data.organism?.scientificName || "Unknown";
+              const functionComment = data.comments?.find(c => c.commentType === 'FUNCTION')?.texts?.[0]?.value || "Not available";
+          
+              setProteinName(name);
+              setGeneName(gene);
+              setOrganism(organism);
+              setBioFunction(functionComment);
+          
+              const newPdbList = data.uniProtKBCrossReferences
+                  .filter(ref => ref.database === 'PDB')
+                  .map(ref => ref.id);
+              setPdbId(newPdbList);
+          
+              if (newPdbList.length > 0) {
+                  const pdb = newPdbList[0];
+                  setSelectedPdbId(pdb);
+          
+                  const pdbRes = await fetch(`https://files.rcsb.org/download/${pdb}.pdb`);
+                  const pdbText = await pdbRes.text();
+          
+                  const viewer = window.$3Dmol.createViewer("viewer", {
+                      defaultcolors: window.$3Dmol.rasmolElementColors,
+                      backgroundColor: 'white',
+                  });
+          
+                  viewer.addModel(pdbText, "pdb");
+                  viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+                  viewer.zoomTo();
+                  viewer.render();
+                  window.currentViewer = viewer;
+              }
+          }
+          
+          else{
                 console.error('Error fetching pdb data:', res2.status);
             }
         }catch(error){
             console.error('Error:', error);
         }
     }
-
-    
-
     const copyToClipboard = () => {
         navigator.clipboard.writeText(sequence)
             .then(() => alert("Copied to clipboard!"))
@@ -159,6 +178,16 @@ function Glygen(){
             />
             <button onClick={protein_search}>Search</button>
 
+            {proteinName && (
+              <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc', backgroundColor: '#f7f7f7' }}>
+                <p><strong>Protein:</strong> {proteinName}</p>
+                <p><strong>Gene:</strong> {geneName}</p>
+                <p><strong>Organism:</strong> {organism}</p>
+                <p><strong>Function:</strong> {bioFunction}</p>
+                <p><strong>UniProt:</strong> <a href={`https://www.uniprot.org/uniprotkb/${uniport}`} target="_blank" rel="noreferrer">{uniport}</a></p>
+              </div>
+            )}
+
 
 
             <div style={{ marginTop: '1rem' }}>
@@ -178,15 +207,28 @@ function Glygen(){
                   🔄 Reset Camera
                 </button>
             </div>
-            {sequence && (
-                <div style={{ marginTop: '1rem' }}>
-                    <strong>Protein Info:</strong> {info}<br />
-                    <strong>Sequence:</strong> {sequence}
-                    <button onClick={copyToClipboard} style={{ marginLeft: '10px' }}>
-                        📋 Copy
-                    </button>
+                          {sequence && (
+                <div style={{
+                  marginTop: '1rem',
+                  maxHeight: '150px',
+                  overflowY: 'auto',
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  border: '1px solid #ccc',
+                  padding: '1rem',
+                  backgroundColor: '#f9f9f9',
+                  fontFamily: 'monospace'
+                }}>
+                  <strong>Sequence:</strong><br />
+                  {sequence}
+                  <br />
+                  <button onClick={copyToClipboard} style={{ marginTop: '0.5rem' }}>
+                    📋 Copy
+                  </button>
                 </div>
-            )}
+              )}
+
             {pdbId.length > 0 && (
                 <div style={{ marginTop: '2rem' }}>
                   <label htmlFor="pdbDropdown">Structure:</label>

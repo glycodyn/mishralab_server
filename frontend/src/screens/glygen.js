@@ -88,7 +88,7 @@ function Glygen(){
           viewer.setStyle({}, styleObj);
       
           if (showLabels) {
-            viewer.addLabel("Residues", { position: { x: 0, y: 0, z: 0 }, backgroundColor: "white" });
+            viewer.addLabel("Residues", { position: { x: 0, y: 0, z: 0 }, backgroundColor: "grey" });
           }
       
           if (showSurface) {

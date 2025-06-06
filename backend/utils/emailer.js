@@ -1,5 +1,6 @@
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+const path = require('path');
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -10,14 +11,23 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export default async function sendNotification(email, jobId) {
+async function sendNotification(email, jobId) {
+  const zipFilename = `${jobId}.zip`;
+  const zipPath = path.join('/home/mishra_lab/af_output', zipFilename);
   await transporter.sendMail({
     from: `"AlphaFold Server" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Your AlphaFold3 result is ready',
     html: `
       <p>Your prediction job <b>${jobId}</b> has completed!</p>
-      <a href="http://localhost:5000/download/${jobId}">Download your result</a>
-    `
+       <p>Your result is attached to this email.</p>
+    `,
+    attachments: [
+      {
+        filename: zipFilename,
+        path: zipPath
+      }
+    ]
   });
 }
+module.exports = sendNotification;

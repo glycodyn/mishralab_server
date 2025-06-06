@@ -47,30 +47,54 @@ app.post('/predict', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
+
   function convertToAlphafoldJson(data, filename = 'target_1') {
     let sequence = '';
-  //if fasta format
+    let ids = ["A"];
+    let name = path.parse(filename).name;
+
+    // FASTA format
     if (data.startsWith('>')) {
       const lines = data.trim().split(/\r?\n/);
-      lines.shift(); 
+      // Extract name 
+      const header = lines.shift();
+      if (header && header.length > 1) {
+        name = header.substring(1).split(/\s+/)[0];
+      }
       sequence = lines.join('').replace(/\s+/g, '');
     } else {
       sequence = data.trim().replace(/\s+/g, '');
     }
+
+    if (!sequence) throw new Error('No sequence found in file.');
+    if (!/^[A-Za-z]+$/.test(sequence)) {
+      throw new Error('Sequence contains invalid characters. Only letters are allowed.');
+    }
+
     return {
-      target_id: path.parse(filename).name,
-      sequence,
-      description: `Converted from ${filename}`,
-      template_features: {},
-      multiple_sequence_alignment: {}
+      name,
+      sequences: [
+        {
+          protein: {
+            id: ids,
+            sequence
+          }
+        }
+      ],
+      modelSeeds: [1],
+      dialect: "alphafold3",
+      version: 1
     };
   }
-  const isJsonFile = inputFile.mimetype === 'application/json';
-  if (!isJsonFile) {
-   
+
+  let jsonFilename = inputFile.filename;
+ 
+  if (inputFile.mimetype !== 'application/json') {
     const inputData = fs.readFileSync(inputFile.path, 'utf8');
     const convertedData = convertToAlphafoldJson(inputData, inputFile.filename);
-    fs.writeFileSync(inputFile.path, JSON.stringify(convertedData, null, 2));
+    jsonFilename = inputFile.filename.replace(/\.[^/.]+$/, "") + ".json";
+    const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
+    fs.writeFileSync(jsonPath, JSON.stringify(convertedData, null, 2));
   }
 
   const jobId = uuidv4();
@@ -79,7 +103,7 @@ app.post('/predict', upload.single('file'), async (req, res) => {
 
   await redisClient.hSet(`job:${jobId}`, {
     email,
-    filename,
+    filename: inputFile.filename,
     status: 'queued',
     createdAt: new Date().toISOString()
   });
@@ -87,7 +111,7 @@ app.post('/predict', upload.single('file'), async (req, res) => {
 
   res.json({ jobId });
 
-  jobQueue.add(() => runDockerJob(jobId, filename, email));
+  jobQueue.add(() => runDockerJob(jobId, inputFile.filename, email), jobId);
 });
 
 
@@ -103,50 +127,50 @@ app.get('/jobs/:email', async (req, res) => {
   res.json(jobs);
 });
 
-app.get('/logs/:jobId', (req, res) => {
-  const { jobId } = req.params;
-  if (!logsMap.has(jobId)) return res.status(404).send('Job not found');
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-
-  res.write(`:\n\n`);// Set retry interval for EventSource
-
-  res.write('retry: 10000\n\n');
-
-  let lastIndex = 0;
-
-  const interval = setInterval(() => {
-  const logs = logsMap.get(jobId);
-  if (!logs) return;
-
-  let sentLogs = false;
-  while (lastIndex < logs.length) {
-    const logLine = logs[lastIndex++];
-    try {
-      res.write(`data: ${logLine}\n\n`);
-      sentLogs = true;
-    } catch (err) {
-      clearInterval(interval);
-      return;
-    }
-  }
-  // Send heartbeat comment if no logs sent
-  if (!sentLogs) {
-    try {
-      res.write(':\n\n');
-    } catch (err) {
-      clearInterval(interval);
-    }
-  }
-}, 1000);
-
-  req.on('close', () => {
-    clearInterval(interval);
-  });
-});
+//app.get('/logs/:jobId', (req, res) => {
+//  const { jobId } = req.params;
+//  if (!logsMap.has(jobId)) return res.status(404).send('Job not found');
+//
+//  res.setHeader('Content-Type', 'text/event-stream');
+//  res.setHeader('Cache-Control', 'no-cache');
+//  res.setHeader('Connection', 'keep-alive');
+//  res.setHeader('Access-Control-Allow-Origin', '*');
+//
+//  res.write(`:\n\n`);// Set retry interval for EventSource
+//
+//  res.write('retry: 10000\n\n');
+//
+//  let lastIndex = 0;
+//
+//  const interval = setInterval(() => {
+//  const logs = logsMap.get(jobId);
+//  if (!logs) return;
+//
+//  let sentLogs = false;
+//  while (lastIndex < logs.length) {
+//    const logLine = logs[lastIndex++];
+//    try {
+//      res.write(`data: ${logLine}\n\n`);
+//      sentLogs = true;
+//    } catch (err) {
+//      clearInterval(interval);
+//      return;
+//    }
+//  }
+//  // Send heartbeat comment if no logs sent
+//  if (!sentLogs) {
+//    try {
+//      res.write(':\n\n');
+//    } catch (err) {
+//      clearInterval(interval);
+//    }
+//  }
+//}, 1000);
+//
+//  req.on('close', () => {
+//    clearInterval(interval);
+//  });
+//});
 
 // GET /download/:filename
 app.get('/download/:jobId', (req, res) => {
@@ -173,9 +197,17 @@ app.get('/download/:jobId', (req, res) => {
 
 app.get('/position/:jobId', (req, res) => {
   const jobId = req.params.jobId;
+  // Check if the job is currently running
+  if (
+    jobQueue.isRunning &&
+    jobQueue.currentJobId === jobId
+  ) {
+    return res.json({ position: 0, running: true });
+  }
+  // Check if the job is in the queue
   const position = jobQueue.queue.findIndex(fn => fn.jobId === jobId);
-  if (position === -1) return res.json({ position: 0, running: true });
-  res.json({ position: position + 1 }); // 1-based index
+  if (position === -1) return res.json({ position: 0, running: false });
+  res.json({ position: position + 1, running: false }); // 1-based index
 });
 
 

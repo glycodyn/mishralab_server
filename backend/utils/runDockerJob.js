@@ -21,7 +21,7 @@ async function runDockerJob(jobId, filename, email) {
   
      const dockerCommandArgs = [
       'run', '--rm', '--gpus', 'all',
-      '-e', 'XLA_CLIENT_MEM_FRACTION=0.5',
+      '-e', 'XLA_CLIENT_MEM_FRACTION=0.75',
       '-v', `${UPLOAD_FOLDER}:/home/mishra_lab/input`,
       '-v', `${outputSubdir}:/home/mishra_lab/af_output`,
       '-v', '/home/mishra_lab/Parameters:/home/mishra_lab/Parameters',
@@ -67,3 +67,5 @@ async function runDockerJob(jobId, filename, email) {
       });
     });
   }
+
+  module.exports = runDockerJob;

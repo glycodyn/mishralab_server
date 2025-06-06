@@ -2,6 +2,7 @@ class JobQueue {
     constructor() {
       this.queue = [];
       this.isRunning = false;
+      this.currentJobId = null;
     }
   
     add(jobFn, jobId) {
@@ -15,12 +16,14 @@ class JobQueue {
   
       this.isRunning = true;
       const job = this.queue.shift();
+      this.currentJobId = job.jobId; // store current job ID
       try {
         await job();
       } catch (err) {
         console.error("Job failed:", err);
       } finally {
         this.isRunning = false;
+        this.currentJobId = null; // reset current job ID
         this.runNext();
       }
     }

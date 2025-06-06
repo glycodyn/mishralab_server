@@ -10,12 +10,23 @@ function Vis(){
   const [position, setPosition] = useState(null);
   const [error, setError] = useState('');
 
+
+  useEffect(() => {
+    if (email) sessionStorage.setItem('email', email);
+    if (jobId) sessionStorage.setItem('jobId', jobId);
+  }, [email, jobId]);
+
+  useEffect(() => {
+    if (!jobId) sessionStorage.removeItem('jobId');
+  }, [jobId]);
+
+
   useEffect(() => {
     if (!jobId || !email) return;
 
     const interval = setInterval(() => {
       // 1. Get job status
-      fetch(`http://localhost:5000/jobs/${email}`)
+      fetch(`http://localhost:5000/jobs/${sessionStorage.getItem('email')}`)
         .then(res => res.json())
         .then(data => {
           const job = data.find(j => j.jobId === jobId);
@@ -23,7 +34,7 @@ function Vis(){
         });
 
       // 2. Get queue position
-      fetch(`http://localhost:5000/position/${jobId}`)
+      fetch(`http://localhost:5000/position/${sessionStorage.getItem('jobId')}`)
         .then(res => res.json())
         .then(data => {
           if (data.running) setPosition(0); // currently running
@@ -64,7 +75,7 @@ const handleUpload = () => {
 const handleDownload = () => {
     if (!jobId) return;
     const link = document.createElement('a');
-    link.href = `http://localhost:5000/download/${jobId}.zip`;
+    link.href = `http://localhost:5000/download/${jobId}`;
     link.setAttribute('download', `${jobId}.zip`);
     document.body.appendChild(link);
     link.click();

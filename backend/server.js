@@ -6,7 +6,10 @@ const { spawn } = require('child_process');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const archiver = require('archiver');
-
+const jobQueue = require('./utils/queue.js'); // Assuming you have a queue setup in utils/queue.js
+const runDockerJob = require('./utils/runDockerJob.js'); // Function to run the Docker job
+const redisClient = require('./utils/redisClient.js')
+const  sendNotification = require('./utils/emailer.js')
 const app = express();
 
 app.use(cors({
@@ -35,79 +38,69 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// POST /predict route
-app.post('/predict', upload.single('file'), (req, res) => {
+
+app.post('/predict', upload.single('file'), async (req, res) => {
+  const email = req.body.email;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
   const inputFile = req.file;
   if (!inputFile) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
-  const jobId = uuidv4();
-   res.json({ jobId });
-  logsMap.set(jobId, []);
-
-  const filename = inputFile.filename;
-const outputSubdir = path.join(OUTPUT_FOLDER, jobId);
-if (!fs.existsSync(outputSubdir)) fs.mkdirSync(outputSubdir, { recursive: true })
-
-   const dockerCommandArgs = [
-    'run', '--rm', '--gpus', 'all',
-    '-e', 'XLA_CLIENT_MEM_FRACTION=0.5',
-    '-v', `${UPLOAD_FOLDER}:/home/mishra_lab/input`,
-    '-v', `${outputSubdir}:/home/mishra_lab/af_output`,
-    '-v', '/home/mishra_lab/Parameters:/home/mishra_lab/Parameters',
-    '-v', '/home/mishra_lab/public_databases:/home/mishra_lab/public_databases',
-    'alphafold3',
-    'python', 'run_alphafold.py',
-    `--json_path=/home/mishra_lab/input/${filename}`,
-    '--model_dir=/home/mishra_lab/Parameters',
-    '--db_dir=/home/mishra_lab/public_databases',
-    '--output_dir=/home/mishra_lab/af_output'
-  ];
-
-const dockerProcess = spawn('docker', dockerCommandArgs);
-
-dockerProcess.stdout.on('data', (data) => {
-  const line = data.toString();
-  logsMap.get(jobId).push(line);
-});
-
-dockerProcess.stderr.on('data', (data) => {
-  const line = data.toString();
-  logsMap.get(jobId).push(`[stderr] ${line}`);
-  
-});
-
-dockerProcess.on('close', (code) => {
-  logsMap.get(jobId).push(`Docker process exited with code ${code}`);
-
-  if (code !== 0) {
-    logsMap.get(jobId).push(`[error] Prediction failed. Docker exited with code ${code}`);
-      return;
+  function convertToAlphafoldJson(data, filename = 'target_1') {
+    let sequence = '';
+  //if fasta format
+    if (data.startsWith('>')) {
+      const lines = data.trim().split(/\r?\n/);
+      lines.shift(); 
+      sequence = lines.join('').replace(/\s+/g, '');
+    } else {
+      sequence = data.trim().replace(/\s+/g, '');
+    }
+    return {
+      target_id: path.parse(filename).name,
+      sequence,
+      description: `Converted from ${filename}`,
+      template_features: {},
+      multiple_sequence_alignment: {}
+    };
+  }
+  const isJsonFile = inputFile.mimetype === 'application/json';
+  if (!isJsonFile) {
+   
+    const inputData = fs.readFileSync(inputFile.path, 'utf8');
+    const convertedData = convertToAlphafoldJson(inputData, inputFile.filename);
+    fs.writeFileSync(inputFile.path, JSON.stringify(convertedData, null, 2));
   }
 
-
-    // Create zip archive
-    const zipFilename = `${jobId}.zip`;
-    const zipPath = path.join(OUTPUT_FOLDER, zipFilename);
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    archive.on('error', err => {
-      logsMap.get(jobId).push(`[error] Zip failed: ${err.message}`);
-    });
-
-    output.on('close', () => {
-      logsMap.get(jobId).push(`Prediction complete. Download link: /download/${zipFilename}`);
-    });
-
-
-
+  const jobId = uuidv4();
    
-    archive.pipe(output);
-    archive.directory(outputSubdir, false);
-    archive.finalize();
+  logsMap.set(jobId, []);
+
+  await redisClient.hSet(`job:${jobId}`, {
+    email,
+    filename,
+    status: 'queued',
+    createdAt: new Date().toISOString()
   });
+  await redisClient.sAdd(`email:${email}`, jobId);
+
+  res.json({ jobId });
+
+  jobQueue.add(() => runDockerJob(jobId, filename, email));
+});
+
+
+
+
+app.get('/jobs/:email', async (req, res) => {
+  const email = req.params.email;
+  const ids = await redisClient.sMembers(`email:${email}`);
+  const jobs = await Promise.all(ids.map(async id => {
+    const data = await redisClient.hGetAll(`job:${id}`);
+    return { jobId: id, ...data };
+  }));
+  res.json(jobs);
 });
 
 app.get('/logs/:jobId', (req, res) => {
@@ -177,6 +170,15 @@ app.get('/download/:jobId', (req, res) => {
     });
   });
 });
+
+app.get('/position/:jobId', (req, res) => {
+  const jobId = req.params.jobId;
+  const position = jobQueue.queue.findIndex(fn => fn.jobId === jobId);
+  if (position === -1) return res.json({ position: 0, running: true });
+  res.json({ position: position + 1 }); // 1-based index
+});
+
+
 // Start the server
 const PORT = 5000;
 app.listen(PORT, '0.0.0.0', () => {

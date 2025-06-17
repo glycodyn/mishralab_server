@@ -1,4 +1,6 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const Job = require('./config/mongoConfig.js'); 
 const multer = require('multer');
 const cors = require('cors');
 const fs = require('fs');
@@ -6,23 +8,34 @@ const { spawn } = require('child_process');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const archiver = require('archiver');
-const jobQueue = require('./utils/queue.js'); // Assuming you have a queue setup in utils/queue.js
-const runDockerJob = require('./utils/runDockerJob.js'); // Function to run the Docker job
+const jobQueue = require('./utils/queue.js'); 
+const convertToAlphafoldJson = require('./utils/convertToJson.js');
+const runDockerJob = require('./utils/runDockerJob.js'); 
 const redisClient = require('./utils/redisClient.js')
 const  sendNotification = require('./utils/emailer.js')
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: '*', 
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 }));
 
+mongoose.connect('mongodb://localhost:27017/alphafold', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('MongoDB connected');
+}).catch(err => {
+  console.error('MongoDB connection error:', err);
+});
+
+
 const logsMap = new Map();
 
 
-const UPLOAD_FOLDER = '/home/mishra_lab/input';
-const OUTPUT_FOLDER = '/home/mishra_lab/af_output';
+const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/af_uploads';
+const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/af_outputs';
 
 
 
@@ -39,8 +52,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
+
 app.post('/predict', upload.single('file'), async (req, res) => {
   const email = req.body.email;
+  const jobTitle = req.body.jobTitle
   if (!email) return res.status(400).json({ error: 'Email is required' });
   const inputFile = req.file;
   if (!inputFile) {
@@ -48,70 +63,52 @@ app.post('/predict', upload.single('file'), async (req, res) => {
   }
 
 
-  function convertToAlphafoldJson(data, filename = 'target_1') {
-    let sequence = '';
-    let ids = ["A"];
-    let name = path.parse(filename).name;
+  
+  const jobId = uuidv4();
+   const ext = path.extname(inputFile.originalname) || '.fasta';
+  const fastaFilename = `${jobId}${ext}`;
+  const fastaPath = path.join(UPLOAD_FOLDER, fastaFilename);
 
-    // FASTA format
-    if (data.startsWith('>')) {
-      const lines = data.trim().split(/\r?\n/);
-      // Extract name 
-      const header = lines.shift();
-      if (header && header.length > 1) {
-        name = header.substring(1).split(/\s+/)[0];
-      }
-      sequence = lines.join('').replace(/\s+/g, '');
-    } else {
-      sequence = data.trim().replace(/\s+/g, '');
-    }
+  fs.renameSync(inputFile.path, fastaPath); // Move file to final location
 
-    if (!sequence) throw new Error('No sequence found in file.');
-    if (!/^[A-Za-z]+$/.test(sequence)) {
-      throw new Error('Sequence contains invalid characters. Only letters are allowed.');
-    }
 
-    return {
-      name,
-      sequences: [
-        {
-          protein: {
-            id: ids,
-            sequence
-          }
-        }
-      ],
-      modelSeeds: [1],
-      dialect: "alphafold3",
-      version: 1
-    };
-  }
-
-  let jsonFilename = inputFile.filename;
+  let jsonFilename = `${jobId}.json`;
+  const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
  
   if (inputFile.mimetype !== 'application/json') {
-    const inputData = fs.readFileSync(inputFile.path, 'utf8');
-    const convertedData = convertToAlphafoldJson(inputData, inputFile.filename);
-    jsonFilename = inputFile.filename.replace(/\.[^/.]+$/, "") + ".json";
-    const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
+    const inputData = fs.readFileSync(fastaPath, 'utf8');
+    const convertedData = convertToAlphafoldJson(inputData, fastaFilename);
     fs.writeFileSync(jsonPath, JSON.stringify(convertedData, null, 2));
+  } else{
+    fs.renameSync(fastaPath, jsonPath); 
   }
 
-  const jobId = uuidv4();
+  
+
+const job = new Job({
+  jobId,
+  email,
+  jobTitle,
+  filename: jsonFilename,
+  status: 'queued',
+  createdAt: new Date()
+});
+await job.save();
+
    
   logsMap.set(jobId, []);
 
   await redisClient.hSet(`job:${jobId}`, {
     email,
-    filename: inputFile.filename,
+    filename: jsonFilename,
     status: 'queued',
     createdAt: new Date().toISOString()
   });
-  await redisClient.sAdd(`email:${email}`, jobId);
+  await redisClient.sAdd(`email:${email}`,jobTitle,jobId);
 
   res.json({ jobId });
 
-  jobQueue.add(() => runDockerJob(jobId, inputFile.filename, email), jobId);
+  jobQueue.add(() => runDockerJob(jobId, jsonFilename, email, jobTitle), jobId);
 });
 
 
@@ -119,11 +116,7 @@ app.post('/predict', upload.single('file'), async (req, res) => {
 
 app.get('/jobs/:email', async (req, res) => {
   const email = req.params.email;
-  const ids = await redisClient.sMembers(`email:${email}`);
-  const jobs = await Promise.all(ids.map(async id => {
-    const data = await redisClient.hGetAll(`job:${id}`);
-    return { jobId: id, ...data };
-  }));
+  const jobs = await Job.find({ email }).sort({ createdAt: -1 }).lean();
   res.json(jobs);
 });
 
@@ -208,6 +201,38 @@ app.get('/position/:jobId', (req, res) => {
   const position = jobQueue.queue.findIndex(fn => fn.jobId === jobId);
   if (position === -1) return res.json({ position: 0, running: false });
   res.json({ position: position + 1, running: false }); // 1-based index
+});
+
+app.get(['/cif/jobId', '/cif/:jobId.cif'], (req, res) => {
+  const jobId = req.params.jobId.replace(/\.cif$/, '');
+  const cifPath = path.join(OUTPUT_FOLDER, jobId, jobId, `${jobId}_model.cif`);
+
+  fs.access(cifPath, fs.constants.F_OK, (err) => {
+    if (err) {
+      console.error(`CIF file for job ${jobId} not found`);
+      return res.status(404).json({ error: 'File not found' });
+    }
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'inline');
+    res.sendFile(cifPath);
+  });
+}
+)
+
+app.get(['/confidence/jobID', '/confidence/:jobId.json'], (req, res) => {
+  const jobId = req.params.jobId.replace(/\.json$/, '');
+  const jsonPath = path.join(OUTPUT_FOLDER, jobId, jobId, `${jobId}_confidences.json`);
+  console.log('Looking for confidence JSON at:', jsonPath); // <-- Add this line
+
+  fs.access(jsonPath, fs.constants.F_OK, (err) => {
+    if (err) {
+      console.error(`Confidence JSON for job ${jobId} not found`);
+      return res.status(404).json({ error: 'File not found' });
+    }
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'inline');
+    res.sendFile(jsonPath);
+  });
 });
 
 

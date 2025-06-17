@@ -4,6 +4,7 @@ import Dashboard from './screens/dashboard';
 import Glygen from './screens/glygen';
 import Vis from './screens/vis';
 import Header from './utils/header';
+import JobViewer from './screens/render';
 import './styles/nav.css'
 
 function App() {
@@ -14,8 +15,8 @@ function App() {
         <Header>
           <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
             <Link to="/" className='nav-link'>Dashboard</Link>
-            <Link to="/glygen" className='nav-link'>Glygen</Link>
-            <Link to="/vis" className='nav-link'>Vis</Link>
+            <Link to="/glygen" className='nav-link'>Visualize Protein</Link>
+            <Link to="/vis" className='nav-link'>AlphaFold3</Link>
           </nav>
         </Header>
         <main className="App-main">
@@ -25,6 +26,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />ß
             <Route path="/glygen" element={<Glygen />} />
             <Route path ="/vis" element={<Vis />} />
+            <Route path="/viewer" element={<JobViewer />} />
           </Routes>
         </main>
       </div>

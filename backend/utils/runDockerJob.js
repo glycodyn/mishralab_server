@@ -4,24 +4,27 @@ const { spawn } = require('child_process');
 const archiver = require('archiver');
 const redisClient = require('./redisClient');
 const sendNotification = require('./emailer');
+const moongoose = require('mongoose');
+const Job = require('../config/mongoConfig');
 
-const UPLOAD_FOLDER = '/home/mishra_lab/input';
-const OUTPUT_FOLDER = '/home/mishra_lab/af_output';
+const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/af_uploads';
+const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/af_outputs';
 
 
-async function runDockerJob(jobId, filename, email) {
+async function runDockerJob(jobId, filename, email, jobTitle) {
 
   
-
+  if (!fs.existsSync(UPLOAD_FOLDER)) fs.mkdirSync(UPLOAD_FOLDER, { recursive: true });
    
   const outputSubdir = path.join(OUTPUT_FOLDER, jobId);
   if (!fs.existsSync(outputSubdir)) fs.mkdirSync(outputSubdir, { recursive: true })
   
   await redisClient.hSet(`job:${jobId}`, 'status', 'running');
+  await Job.updateOne({ jobId },{$set:  { status: 'running' }});
   
      const dockerCommandArgs = [
       'run', '--rm', '--gpus', 'all',
-      '-e', 'XLA_CLIENT_MEM_FRACTION=0.75',
+      '-e', 'XLA_CLIENT_MEM_FRACTION=0.95',
       '-v', `${UPLOAD_FOLDER}:/home/mishra_lab/input`,
       '-v', `${outputSubdir}:/home/mishra_lab/af_output`,
       '-v', '/home/mishra_lab/Parameters:/home/mishra_lab/Parameters',
@@ -40,6 +43,7 @@ async function runDockerJob(jobId, filename, email) {
       proc.on('close', async (code) => {
         if (code !== 0) {
           await redisClient.hSet(`job:${jobId}`, 'status', 'failed');
+          await Job.deleteOne({ jobId });
           return resolve();
         }
   
@@ -61,7 +65,8 @@ async function runDockerJob(jobId, filename, email) {
             completedAt: new Date().toISOString(),
             zipPath
           });
-          await sendNotification(email, jobId);
+          await Job.updateOne({ jobId }, { $set: { status: 'completed', completedAt: new Date() } });
+          await sendNotification(email, jobId, jobTitle);
           resolve();
         });
       });

@@ -11,6 +11,7 @@ const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/af_uploads';
 const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/af_outputs';
 
 
+
 async function runDockerJob(jobId, filename, email, jobTitle) {
 
   
@@ -18,7 +19,8 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
    
   const outputSubdir = path.join(OUTPUT_FOLDER, jobId);
   if (!fs.existsSync(outputSubdir)) fs.mkdirSync(outputSubdir, { recursive: true })
-  
+  const logPath = path.join(outputSubdir, 'alphafold.log');
+  const logStream = fs.createWriteStream(logPath);
   await redisClient.hSet(`job:${jobId}`, 'status', 'running');
   await Job.updateOne({ jobId },{$set:  { status: 'running' }});
   
@@ -39,8 +41,23 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
   
     return new Promise((resolve) => {
       const proc = spawn('docker', dockerCommandArgs);
+
+      proc.stdout.pipe(logStream);
+      proc.stderr.pipe(logStream);
   
       proc.on('close', async (code) => {
+        logStream.end();
+
+  // Check for OOM in the log file
+  const logContent = fs.readFileSync(logPath, 'utf8');
+  if (
+    logContent.includes('RESOURCE_EXHAUSTED') ||
+    logContent.includes('Out of memory')
+  ) {
+    await redisClient.hSet(`job:${jobId}`, 'status', 'failed_oom');
+    await Job.updateOne({ jobId }, { $set: { status: 'failed_oom' } });
+    return resolve();
+  }
         if (code !== 0) {
           await redisClient.hSet(`job:${jobId}`, 'status', 'failed');
           await Job.deleteOne({ jobId });
@@ -66,7 +83,12 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
             zipPath
           });
           await Job.updateOne({ jobId }, { $set: { status: 'completed', completedAt: new Date() } });
+          try{
           await sendNotification(email, jobId, jobTitle);
+          }
+          catch(err){
+            console.error('Error sending notification:', err);
+          }
           resolve();
         });
       });

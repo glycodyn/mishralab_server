@@ -9,7 +9,7 @@ function JobViewer() {
   return (
     <div style={{ padding: 24 }}>
       <h2>Structure Viewer for Job {jobId}</h2>
-      <Viewer id={`molstar-viewer-${jobId}`} url={`http://172.25.15.192:5000/cif/${jobId}.cif`} />
+      <Viewer id={`molstar-viewer-${jobId}`} url={`http://172.25.11.91:5000/cif/${jobId}.cif`} />
     </div>
   );
 }

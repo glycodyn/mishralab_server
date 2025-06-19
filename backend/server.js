@@ -238,6 +238,21 @@ app.get(['/confidence/jobID', '/confidence/:jobId.json'], (req, res) => {
 
 // Start the server
 const PORT = 5000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  
+  try {
+    
+    await Job.updateMany({ status: 'running' }, { $set: { status: 'queued' } });
+
+   
+    const queuedJobs = await Job.find({ status: 'queued' }).sort({ createdAt: 1 }).lean();
+    console.log(`Found ${queuedJobs.length} queued jobs at startup`);
+    for (const job of queuedJobs) {
+      console.log(`Queueing job at startup: ${job.jobId}`);
+      jobQueue.add(() => runDockerJob(job.jobId, job.filename, job.email, job.jobTitle), job.jobId);
+    }
+  } catch (err) {
+    console.error('Error starting queued jobs at startup:', err);
+  }
 });

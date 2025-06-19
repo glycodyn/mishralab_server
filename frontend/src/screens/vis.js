@@ -28,13 +28,13 @@ function Vis() {
   useEffect(() => {
     if (!jobId || !email) return;
     const interval = setInterval(() => {
-      fetch(`http://172.25.15.192:5000/jobs/${email}`)
+      fetch(`http://172.25.11.91:5000/jobs/${email}`)
         .then(res => res.json())
         .then(data => {
           const job = data.find(j => j.jobId === jobId);
           if (job) setStatus(job.status);
         });
-      fetch(`http://172.25.15.192:5000/position/${jobId}`)
+      fetch(`http://172.25.11.91:5000/position/${jobId}`)
         .then(res => res.json())
         .then(data => {
           if (data.running) setPosition(0);
@@ -61,7 +61,7 @@ function Vis() {
     formData.append('email', email);
     formData.append('jobTitle', jobTitle);
 
-    fetch('http://172.25.15.192:5000/predict', {
+    fetch('http://172.25.11.91:5000/predict', {
       method: 'POST',
       body: formData
     })
@@ -80,7 +80,7 @@ function Vis() {
     const id = downloadJobId || jobId;
     if (!id) return;
     const link = document.createElement('a');
-    link.href = `http://172.25.15.192:5000/download/${id}`;
+    link.href = `http://172.25.11.91:5000/download/${id}`;
     link.setAttribute('download', `${id}.zip`);
     document.body.appendChild(link);
     link.click();
@@ -89,7 +89,7 @@ function Vis() {
 
   const handleSearch = () => {
     if (!searchEmail) return;
-    fetch(`http://172.25.15.192:5000/jobs/${searchEmail}`)
+    fetch(`http://172.25.11.91:5000/jobs/${searchEmail}`)
       .then(res => res.json())
       .then(data => setSearchResults(data))
       .catch(() => setSearchResults([]));
@@ -206,7 +206,10 @@ function Vis() {
         
           <h4>Structure Viewer for Job {viewCifJobId}</h4>
           {viewCifJobId && (
-          <Viewer   id={`molstar-viewer-${viewCifJobId}`}url={`http://172.25.15.192:5000/cif/${viewCifJobId}.cif`}  />  )}       
+            <div className="viewer-wrapper">
+              <Viewer id={`molstar-viewer-${viewCifJobId}`} url={`http://172.25.11.91:5000/cif/${viewCifJobId}.cif`} />
+            </div>
+          )}      
           {/* Add pLDDT color legend */}
           <div className="plddt-legend" style={{ marginTop: '10px', padding: '10px', border: '1px solid #eee', borderRadius: '5px' }}>
             <h5 style={{ marginTop: '0', marginBottom: '8px' }}>pLDDT Confidence Legend:</h5>

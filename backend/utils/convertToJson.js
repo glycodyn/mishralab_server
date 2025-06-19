@@ -46,45 +46,46 @@ function convertToAlphafoldJson(data, filename = 'target_1') {
     entries.push({ header: filename, sequence: seq });
   }
 
-  //json file
-  const sequences = entries.map((entry, idx) => {
-    const seq = entry.sequence.replace(/\s+/g, '').toUpperCase();
-    if (!seq) throw new Error('No sequence found for chain.');
-    if (!/^[A-Za-z]+$/.test(seq)) {
-      throw new Error('Sequence contains invalid characters. Only letters are allowed.');
+  const sequences = [];
+    let chainIdx = 0;
+    for (const entry of entries) {
+        // Split by colon, remove empty, trim, and uppercase
+        const chains = entry.sequence.split(':').map(s => s.replace(/\s+/g, '').toUpperCase()).filter(Boolean);
+        for (const chainSeq of chains) {
+            if (!chainSeq) continue;
+            if (!/^[A-Za-z]+$/.test(chainSeq)) {
+                throw new Error('Sequence contains invalid characters. Only letters are allowed.');
+            }
+            const id = getChainId(chainIdx++);
+            const type = getChainType(chainSeq);
+            if (type === 'protein') {
+                sequences.push({
+                    protein: {
+                        id,
+                        sequence: chainSeq
+                    }
+                });
+            } else if (type === 'dna') {
+                sequences.push({
+                    dna: {
+                        id,
+                        sequence: chainSeq
+                    }
+                });
+            } else if (type === 'rna') {
+                sequences.push({
+                    rna: {
+                        id,
+                        sequence: chainSeq
+                    }
+                });
+            }
+        }
     }
-    const id = getChainId(idx);
-    const type = getChainType(seq);
-    if (type === 'protein') {
-      return {
-        protein: {
-          id,
-          sequence: seq
-        
-        }
-      };
-    } else if (type === 'dna') {
-      return {
-        dna: {
-          id,
-          sequence: seq
-         
-        }
-      };
-    } else if (type === 'rna') {
-      return {
-        rna: {
-          id,
-          sequence: seq
-         
-        }
-      };
-    }
-  });
   return {
     name: path.parse(filename).name,
     sequences,
-    modelSeeds: [1,2],
+    modelSeeds: [1],
     dialect: "alphafold3",
     version: 3
     

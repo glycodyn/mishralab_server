@@ -28,6 +28,43 @@
   color: #61dafb;
 }
 
+.msp-plugin {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.msp-viewport {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.msp-layout-region-bottom {
+    display: none !important;
+}
+
+/* Show right panel */
+.msp-layout-region-right {
+    display: block !important;
+    width: 300px !important;
+    position: absolute !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+}
+
+/* Adjust main viewport */
+.msp-layout-main {
+    width: calc(100% - 300px) !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

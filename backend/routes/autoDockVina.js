@@ -67,11 +67,9 @@ router.post('/dock', async (req, res) => {
                 message: 'Missing required parameters: receptorPath, ligandPath, and configPath are required' 
             });
         }
-        
         if (!fs.existsSync(OUTPUT_FOLDER)) {
             fs.mkdirSync(OUTPUT_FOLDER, { recursive: true });
         }
-        
         const outputFileName = `result_${Date.now()}.pdbqt`;
         const outputPath = path.join(OUTPUT_FOLDER, outputFileName);
         

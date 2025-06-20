@@ -30,18 +30,30 @@ function Vis() {
   return re.test(String(email).toLowerCase());
 };
 
+  const validateFasta = (text) => {
+    const lines = text.split('\n');
+    return lines.length >=2 && lines[0].startsWith('>') && lines.slice(1).some(line => /^[A-Za-z]+$/.test(line.trim())); 
+  }
+
+  const validateFile = (file) => {
+    if (!file) return false;
+    const fileName = file.name.toLowerCase();
+    const validExtensions = ['.fasta', '.fa', '.txt','.json'];
+    return validExtensions.some(ext => fileName.endsWith(ext));
+  };
+
 
 
   useEffect(() => {
     if (!jobId || !email) return;
     const interval = setInterval(() => {
-      fetch(`http://172.25.11.91:5000/jobs/${email}`)
+      fetch(`${process.env.REACT_APP_API_URL}/jobs/${email}`)
         .then(res => res.json())
         .then(data => {
           const job = data.find(j => j.jobId === jobId);
           if (job) setStatus(job.status);
         });
-      fetch(`http://172.25.11.91:5000/position/${jobId}`)
+      fetch(`${process.env.REACT_APP_API_URL}/position/${jobId}`)
         .then(res => res.json())
         .then(data => {
           if (data.running) setPosition(0);
@@ -62,6 +74,17 @@ function Vis() {
       return;
     }
 
+    if (fastaText.trim() && !validateFasta(fastaText)) {
+    setError('Invalid FASTA format. Please ensure it starts with ">" and contains valid sequence lines.');
+    return;
+  }
+
+  if (file && !validateFile(file)) {
+    setError('Only FASTA (.fasta, .fa) and JSON (.json) files are accepted.');
+    setFile(null);
+    return;
+  }
+
   if (!jobTitle.trim()) {
     setError('Please enter a job title');
     return;
@@ -77,18 +100,41 @@ function Vis() {
     }
     formData.append('email', email);
     formData.append('jobTitle', jobTitle);
-
-    fetch('http://172.25.11.91:5000/predict', {
-      method: 'POST',
-      body: formData
-    })
-      .then(res => res.json())
-      .then(data => {
-        setJobId(data.jobId);
-        setStatus('queued');
-        setPosition(null);
-      })
-      .catch(() => setError('Failed to upload file.'));
+fetch(`${process.env.REACT_APP_API_URL}/predict`, {
+  method: 'POST',
+  body: formData
+})
+.then(res => {
+  if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error('File too large. Please upload a smaller file.');
+    } else if (res.status === 400) {
+      return res.json().then(err => {
+        throw new Error(err.error || 'Invalid request. Please check your input.');
+      });
+    } else if (res.status === 429) {
+      throw new Error('Too many requests. Please try again later.');
+    } else if (res.status >= 500) {
+      throw new Error('Server error. Our team has been notified.');
+    } else {
+      throw new Error(`Request failed with status: ${res.status}`);
+    }
+  }
+  return res.json();
+})
+.then(data => {
+  setJobId(data.jobId);
+  setStatus('queued');
+  setPosition(null);
+  setError(''); // Clear any previous errors
+})
+.catch(err => {
+  console.error('Upload error:', err);
+  setError(`Failed to upload file: ${err.message || 'Unknown error occurred'}`);
+  if (err.message.includes('too large')) {
+  
+  }
+});
   };
 
  
@@ -97,7 +143,7 @@ function Vis() {
     const id = downloadJobId || jobId;
     if (!id) return;
     const link = document.createElement('a');
-    link.href = `http://172.25.11.91:5000/download/${id}`;
+    link.href = `${process.env.REACT_APP_API_URL}/download/${id}`;
     link.setAttribute('download', `${id}.zip`);
     document.body.appendChild(link);
     link.click();
@@ -105,8 +151,14 @@ function Vis() {
   };
 
   const handleSearch = () => {
-    if (!searchEmail) return;
-    fetch(`http://172.25.11.91:5000/jobs/${searchEmail}`)
+
+    if (!searchEmail || !validateEmail(searchEmail)) {
+      setSearchResults([]);
+      setError('Please enter a valid email address to search.');
+      return;
+    }
+    setError('');
+    fetch(`${process.env.REACT_APP_API_URL}/jobs/${searchEmail}`)
       .then(res => res.json())
       .then(data => setSearchResults(data))
       .catch(() => setSearchResults([]));
@@ -152,10 +204,24 @@ function Vis() {
         <strong>Or upload a file:</strong>
         <input
           type="file"
-          onChange={e => {
-            setFile(e.target.files[0]);
-            setFastaText(''); 
-          }}
+          accept=".fasta,.fa,.json"
+  onChange={e => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      if (!validateFile(selectedFile)) {
+        setError('Only FASTA (.fasta, .fa) and JSON (.json) files are accepted.');
+        e.target.value = ''; 
+        return;
+      }
+        if (selectedFile.size > 20 * 1024 * 1024) {
+      setError('File size exceeds 5MB limit');
+      return;
+    }
+      setFile(selectedFile);
+      setFastaText('');
+      setError(''); 
+    }
+  }}
         />
       </div>
 
@@ -224,7 +290,7 @@ function Vis() {
           <h4>Structure Viewer for Job {job.jobTitle}</h4>
           {viewCifJobId && (
             <div className="viewer-wrapper">
-              <Viewer id={`molstar-viewer-${viewCifJobId}`} url={`http://172.25.11.91:5000/cif/${viewCifJobId}.cif`} />
+              <Viewer id={`molstar-viewer-${viewCifJobId}`} url={`${process.env.REACT_APP_API_URL}/cif/${viewCifJobId}.cif`} />
             </div>
           )}      
           {/* Add pLDDT color legend */}

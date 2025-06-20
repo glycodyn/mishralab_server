@@ -1,22 +1,163 @@
-/* Header styles */
+.dashboard-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+  color: #333;
+}
+
 .dashboard-header {
-    background-color: #00008b;
-    color: red;
-    padding: 10px;
-    text-align: left;
-    border-radius: 10px;
-    padding: 10px 20px; /* side padding */
+  text-align: center;
+  margin-bottom: 3rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #eaeaea;
 }
 
 .dashboard-header h1 {
-   font-size: 24px;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #00008b; /* Ole Miss blue */
 }
 
-.header a {
-   color: white;
-   text-decoration: none;
+.dashboard-header p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
-.header a:hover {
-   text-decoration: underline;
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.service-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+}
+
+.coming-soon {
+  opacity: 0.8;
+  position: relative;
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.service-icon {
+  font-size: 2.5rem;
+  margin-right: 1rem;
+  display: inline-block;
+}
+
+.service-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: #00008b; /* Ole Miss blue */
+  flex: 1;
+}
+
+.coming-soon-badge {
+  background: #ff6b6b;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.service-description {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  flex-grow: 1;
+}
+
+.feature-list {
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.feature-list li {
+  margin-bottom: 0.5rem;
+}
+
+.service-button {
+  display: inline-block;
+  background: #00008b; /* Ole Miss blue */
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+  text-align: center;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: auto;
+}
+
+.service-button:hover {
+  background: #0000cd;
+}
+
+.service-button.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.dashboard-footer {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eaeaea;
+  text-align: center;
+}
+
+.dashboard-footer h2 {
+  color: #00008b; /* Ole Miss blue */
+  margin-bottom: 1rem;
+}
+
+.dashboard-footer p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.dashboard-footer a {
+  color: #00008b; /* Ole Miss blue */
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+  
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
 }

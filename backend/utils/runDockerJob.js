@@ -48,44 +48,49 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
       proc.on('close', async (code) => {
         logStream.end();
 
-  // Check for OOM in the log file
+  
   const logContent = fs.readFileSync(logPath, 'utf8');
-  if (
-    logContent.includes('RESOURCE_EXHAUSTED') ||
-    logContent.includes('Out of memory')
-  ) {
-    await redisClient.hSet(`job:${jobId}`, 'status', 'failed_oom');
-    await Job.updateOne({ jobId }, { $set: { status: 'failed_oom' } });
-    return resolve();
+  
+  const errorPatterns = [
+    { pattern: /RESOURCE_EXHAUSTED|Out of memory/i, status: 'failed_oom' },
+    { pattern: /No sequence data found/i, status: 'failed_no_sequence' },
+    { pattern: /Invalid input format/i, status: 'failed_invalid_input' },
+    { pattern: /Connection timed out/i, status: 'failed_timeout' }
+  ];
+  
+  for (const { pattern, status } of errorPatterns) {
+    if (pattern.test(logContent)) {
+      await redisClient.hSet(`job:${jobId}`, 'status', status);
+      await Job.updateOne({ jobId }, { $set: { status, failedAt: new Date() } });
+      return resolve();
+    }
   }
-        if (code !== 0) {
-          let errorMsg = "Unexpected error occurred";
-           const errorLines = logContent.split('\n').filter(line => 
-            line.includes('Error:') || 
-          line.includes('Exception:') || 
-            line.includes('failed:') ||
-          line.includes('CRITICAL')
+  
+  if (code !== 0) {
+    const errorLines = logContent.split('\n').filter(line => 
+      /Error:|Exception:|failed:|CRITICAL|WARNING:|Fatal:/i.test(line)
     );
     
-    if (errorLines.length > 0) {
-      errorMsg = errorLines[errorLines.length - 1].trim(); // Get the last error line
+    let errorMsg = errorLines.length > 0 
+      ? errorLines[errorLines.length - 1].trim() 
+      : "Unexpected error occurred";
+    
+    if (errorMsg.length > 200) {
+      errorMsg = errorMsg.substring(0, 197) + '...';
     }
     
-    await redisClient.hSet(`job:${jobId}`, {
-      status: `failed: ${errorMsg}`,
-      
-    });
+    const status = `failed: ${errorMsg}`;
     
-    
+    await redisClient.hSet(`job:${jobId}`, { status });
     await Job.updateOne({ jobId }, { 
       $set: { 
-        status: `failed : ${errorMsg}`,
-        failedAt: new Date().toISOString()
+        status,
+        failedAt: new Date()
       } 
     });
-          return resolve();
-        }
-  
+    
+    return resolve();
+  }
   
   
       // Create zip archive

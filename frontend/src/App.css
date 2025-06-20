@@ -1,5 +1,7 @@
 .App {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .App-logo {
@@ -71,5 +73,47 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000; /* Ensures header stays on top */
+  background-color: #00008b; /* Your Ole Miss blue color */
+}
+
+/* Style for the nav element inside Header component */
+.header-container nav {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Fix inline style issue - replace with proper CSS */
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 0 15px;
+}
+
+.App-main {
+  margin-top: 60px; /* Adjust this value based on your header height */
+  flex: 1;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .App-main {
+    margin-top: 50px; /* Adjust for smaller header on mobile */
+  }
+  
+  .nav-link {
+    padding: 0 10px;
+    font-size: 14px;
   }
 }

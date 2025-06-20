@@ -12,6 +12,7 @@ function App() {
   return (
     <Router>
       <div className="App">
+        < div classname="header-container">
         <Header>
           <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
             <Link to="/" className='nav-link'>Home</Link>
@@ -19,6 +20,7 @@ function App() {
             <Link to="/vis" className='nav-link'>AlphaFold3</Link>
           </nav>
         </Header>
+        </div>
         <main className="App-main">
           <Routes>
           

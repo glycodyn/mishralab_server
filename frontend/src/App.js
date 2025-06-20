@@ -14,7 +14,7 @@ function App() {
       <div className="App">
         <Header>
           <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
-            <Link to="/" className='nav-link'>Dashboard</Link>
+            <Link to="/" className='nav-link'>Home</Link>
             <Link to="/glygen" className='nav-link'>Visualize Protein</Link>
             <Link to="/vis" className='nav-link'>AlphaFold3</Link>
           </nav>

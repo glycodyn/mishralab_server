@@ -38,7 +38,7 @@ function Viewer({ url, format = 'mmcif', id = 'molstar-viewer' }) {
         ref={viewerRef}
         style={{
           width: '100%',
-          height: '600px',
+          height: '800px',
           margin: '0 auto',
           border: '1px solid #ccc',
           borderRadius: 8,

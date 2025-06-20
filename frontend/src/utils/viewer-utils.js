@@ -88,8 +88,6 @@ export async function initViewer(elementOrId, options) {
     spec: spec,
     render: renderReact18
   });
-
-  // Force the layout to take full size of container
   setTimeout(() => {
      const container = parent.querySelector('.msp-plugin');
         if (container) {
@@ -100,7 +98,6 @@ export async function initViewer(elementOrId, options) {
             container.style.height = '100%';
         }
         
-        // Force bottom region to be collapsed and right region to be expanded
         const bottomPanel = parent.querySelector('.msp-layout-region-bottom');
         if (bottomPanel) {
             bottomPanel.style.display = 'none';
@@ -109,10 +106,10 @@ export async function initViewer(elementOrId, options) {
         const rightPanel = parent.querySelector('.msp-layout-region-right');
         if (rightPanel) {
             rightPanel.style.display = 'block';
-            rightPanel.style.width = '300px'; // Or whatever width you prefer
+            rightPanel.style.width = '300px';
         }
         
-        // Update layout state
+       
         plugin.layout.setProps({
             regionState: {
                 bottom: 'hidden',
@@ -142,22 +139,20 @@ export async function initViewer(elementOrId, options) {
  * @returns {Promise<Object>} - Returns the applied preset object.
  */
 export async function loadStructure(plugin, jobId, url, options) {
-  const plddtArray = options?.plddtArray; // Use the array passed from Viewer
+  const plddtArray = options?.plddtArray; 
 
-  // Remove previous structures
   await plugin.clear();
 
-  // Download and parse
   const data = await plugin.builders.data.download({ url, isBinary: options?.isBinary });
   const trajectory = await plugin.builders.structure.parseTrajectory(data, options?.format ?? 'mmcif');
 
-  // Use the UI preset to load the structure with full UI interactivity
+  
   const preset = plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
  await preset;
 
 const state = plugin.state.data;
 let reprs = [];
-for (let i = 0; i < 30; i++) { // try for up to ~3s
+for (let i = 0; i < 30; i++) { 
   reprs = state.selectQ(q => q.ofType('structure-representation'));
   if (reprs.length > 0) break;
   await new Promise(res => setTimeout(res, 100));
@@ -174,7 +169,7 @@ if (reprs.length === 0) {
       structures[0],
       { type: 'cartoon', color: 'json-plddt' }
     );
-    // Wait for the representation to appear
+    
     for (let i = 0; i < 10; i++) {
       reprs = state.selectQ(q => q.ofType('structure-representation'));
       if (reprs.length > 0) break;
@@ -188,7 +183,6 @@ if (reprs.length === 0) {
   for (const repr of reprs) {
     await state.update(repr).update({
       color: 'json-plddt'
-      // colorParams: { plddtArray }
     }).commit();
   }
 

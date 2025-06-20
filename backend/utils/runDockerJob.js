@@ -59,8 +59,30 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
     return resolve();
   }
         if (code !== 0) {
-          await redisClient.hSet(`job:${jobId}`, 'status', 'failed');
-          await Job.deleteOne({ jobId });
+          let errorMsg = "Unexpected error occurred";
+           const errorLines = logContent.split('\n').filter(line => 
+            line.includes('Error:') || 
+          line.includes('Exception:') || 
+            line.includes('failed:') ||
+          line.includes('CRITICAL')
+    );
+    
+    if (errorLines.length > 0) {
+      errorMsg = errorLines[errorLines.length - 1].trim(); // Get the last error line
+    }
+    
+    await redisClient.hSet(`job:${jobId}`, {
+      status: `failed: ${errorMsg}`,
+      
+    });
+    
+    
+    await Job.updateOne({ jobId }, { 
+      $set: { 
+        status: `failed : ${errorMsg}`,
+        failedAt: new Date().toISOString()
+      } 
+    });
           return resolve();
         }
   

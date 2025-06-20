@@ -25,6 +25,13 @@ function Vis() {
     if (!jobId) sessionStorage.removeItem('jobId');
   }, [jobId]);
 
+  const validateEmail = (email) => {
+  const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  return re.test(String(email).toLowerCase());
+};
+
+
+
   useEffect(() => {
     if (!jobId || !email) return;
     const interval = setInterval(() => {
@@ -45,10 +52,20 @@ function Vis() {
   }, [jobId, email]);
 
    const handleUpload = () => {
+
+     if (!email || !validateEmail(email)) {
+    setError('Please enter a valid email address');
+    return;
+  }
     if ((!file && !fastaText.trim()) || !email) {
       setError('Please select a file or paste FASTA, and enter your email.');
       return;
     }
+
+  if (!jobTitle.trim()) {
+    setError('Please enter a job title');
+    return;
+  }
     setError('');
     const formData = new FormData();
     if (file) {
@@ -204,7 +221,7 @@ function Vis() {
     {viewCifJobId === job.jobId && (
       <div style={{ margin: '2em 0' }}>
         
-          <h4>Structure Viewer for Job {viewCifJobId}</h4>
+          <h4>Structure Viewer for Job {job.jobTitle}</h4>
           {viewCifJobId && (
             <div className="viewer-wrapper">
               <Viewer id={`molstar-viewer-${viewCifJobId}`} url={`http://172.25.11.91:5000/cif/${viewCifJobId}.cif`} />

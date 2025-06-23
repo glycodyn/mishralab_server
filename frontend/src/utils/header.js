@@ -9,7 +9,7 @@ const Header = ({children}) => {
         alignItems: 'center'
       }}>
         <div>
-          <h1 style={{ margin: 0 }}>Ole Miss</h1>
+          <h1 style={{ margin: 0 }}>University of Mississippi</h1>
           <h2 style={{ margin: 0 }}>Biomedical Engineering</h2>
         </div>
         <div>

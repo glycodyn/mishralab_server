@@ -1,6 +1,6 @@
-import React from "react";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useState} from "react";
+
 import '../styles/dashboard.css';
 
 function Glygen(){
@@ -107,7 +107,7 @@ function Glygen(){
           viewer.setStyle({}, styleObj);
       
           if (showLabels) {
-            viewer.addLabel("Residues", { position: { x: 0, y: 0, z: 0 }, backgroundColor: "white" });
+            viewer.addLabel("Residues", { position: { x: 0, y: 0, z: 0 }, backgroundColor: "grey" });
           }
       
           if (showSurface) {

@@ -12,11 +12,7 @@ function Dashboard(){
             <p>Welcome to the Dashboard!</p>
             
         </div>
-
-       
-        
-    
-        
+ 
 
     );
 }

@@ -4,42 +4,42 @@ import './DockingViewer.css';
 const DockingViewer = () => {
   const stageRef = useRef(null);
   const boxCompRef = useRef(null);
+  const ligandCompRef = useRef(null);
 
   useEffect(() => {
     let stage;
-    let boxComp = null;
     let clickedX, clickedY, clickedZ;
+    
+    function resetStage() {
+      const viewport = document.getElementById("viewport");
+      viewport.innerHTML = ""; // wipe canvas
+    
+      const newStage = new window.NGL.Stage("viewport");
+      stageRef.current = newStage;
+      return newStage;
+    }
+    
 
     const init = async () => {
       const NGL = window.NGL;
       stage = new NGL.Stage("viewport");
       stageRef.current = stage;
 
-      const shape = new NGL.Shape('box');
-      shape.addBox(
-        [0, 0, 0],        // center
-        [0, 0, 1],        // blue
-        5,                // size = 5 for all axes
-        [5, 0, 0],        // width‑axis (x)
-        [0, 5, 0]         // height‑axis (y)
-      );
-      stage
-        .addComponentFromObject(shape)
-        .addRepresentation('buffer');
-
-
-
+      document.getElementById("removeCubeBtn").addEventListener("click", () => {
+        if (boxCompRef.current) {
+          stage.removeComponent(boxCompRef.current);
+          boxCompRef.current = null;
+        }
+      });
 
       const cxInput = document.getElementById("centerX");
       const cyInput = document.getElementById("centerY");
       const czInput = document.getElementById("centerZ");
 
-      const computeCorner = (cx, cy, cz, sx, sy, sz) => [cx, cy, cz];
-
       window.addSolidBox = () => {
-        const cx = parseFloat(document.getElementById("centerX").value);
-        const cy = parseFloat(document.getElementById("centerY").value);
-        const cz = parseFloat(document.getElementById("centerZ").value);
+        const cx = parseFloat(cxInput.value);
+        const cy = parseFloat(cyInput.value);
+        const cz = parseFloat(czInput.value);
         const sx = parseFloat(document.getElementById("sizeX").value);
         const sy = parseFloat(document.getElementById("sizeY").value);
         const sz = parseFloat(document.getElementById("sizeZ").value);
@@ -49,41 +49,56 @@ const DockingViewer = () => {
           return;
         }
 
-        if (boxComp) stage.removeComponent(boxComp);
-        const corner = computeCorner(cx, cy, cz, sx, sy, sz);
+        if (boxCompRef.current) stage.removeComponent(boxCompRef.current);
+
         const shape = new NGL.Shape("cube");
-        shape.addBox(corner, [1, 0, 1], sx, [0, sy, 0], [0, 0, sz]);
-        boxComp = stage.addComponentFromObject(shape);
-        boxComp.addRepresentation("buffer", {
+        shape.addBox([cx, cy, cz], [1, 0, 1], sx, [0, sy, 0], [0, 0, sz]);
+        const comp = stage.addComponentFromObject(shape);
+        comp.addRepresentation("surface", {
           color: 0xffff00,
           opacity: 0.4,
           transparent: true,
           side: "double"
         });
         stage.viewerControls.center(new NGL.Vector3(cx, cy, cz));
-        console.log("Box was added at " + cx + cy + cz)
+        boxCompRef.current = comp;
       };
 
       window.loadLigand = async () => {
         const f = document.getElementById("ligandFile").files[0];
         if (!f) return alert("Pick a ligand first");
+      
         const r = new FileReader();
         r.onload = async () => {
-          const b64 = r.result;
-          localStorage.setItem("cachedLigand", b64);
-          const blob = await fetch(b64).then(r => r.blob());
-          stage.loadFile(blob, { ext: 'pdbqt' }).then(c => {
-            c.addRepresentation("ball+stick", { color: "red" });
+          const text = r.result;
+          localStorage.setItem("cachedLigand", text);
+          const blob = new Blob([text], { type: "text/plain" });
+      
+          // 🚨 hard reset
+          const stage = resetStage();
+      
+          stage.loadFile(blob, { ext: "pdbqt" }).then((c) => {
+            c.addRepresentation("ball+stick", { colorScheme: "element" });
             stage.autoView();
+            stage.viewer.requestRender();
+            ligandCompRef.current = c;
           });
         };
-        r.readAsDataURL(f);
+      
+        r.readAsText(f);
+        console.log("Ligand loaded (after full stage reset)");
       };
+      
+      
 
       window.loadProtein = () => {
         const f = document.getElementById("proteinFile").files[0];
         if (!f) return alert("Select a protein file.");
         const ext = f.name.split('.').pop();
+
+        stage.removeAllComponents();
+        boxCompRef.current = null;
+
         const reader = new FileReader();
         reader.onload = e => {
           const blob = new Blob([e.target.result], { type: 'text/plain' });
@@ -94,6 +109,7 @@ const DockingViewer = () => {
           });
         };
         reader.readAsText(f);
+        console.log("Protein Loaded")
       };
 
       stage.signals.clicked.add(p => {
@@ -122,7 +138,7 @@ const DockingViewer = () => {
 
       window.resetViewer = () => {
         stage.removeAllComponents();
-        boxComp = null;
+        boxCompRef.current = null;
         stage.handleResize();
       };
 
@@ -131,12 +147,15 @@ const DockingViewer = () => {
 
       const cached = localStorage.getItem("cachedLigand");
       if (cached) {
-        const blob = await fetch(cached).then(r => r.blob());
+        const blob = new Blob([cached], { type: 'text/plain' });
+
         stage.loadFile(blob, { ext: 'pdbqt' }).then(c => {
-          c.addRepresentation("ball+stick", { color: "red" });
+          c.addRepresentation("ball+stick", { colorScheme: "element" });
           stage.autoView();
+          ligandCompRef.current = c;
         });
       }
+
 
       window.addEventListener("resize", () => stage.handleResize());
     };
@@ -146,6 +165,18 @@ const DockingViewer = () => {
     script.onload = init;
     document.body.appendChild(script);
   }, []);
+
+  const handleAddBox = () => {
+    if (!stageRef.current) return;
+    const cx = parseFloat(document.getElementById("centerX").value);
+    const cy = parseFloat(document.getElementById("centerY").value);
+    const cz = parseFloat(document.getElementById("centerZ").value);
+    const shape = new window.NGL.Shape('box');
+    shape.addBox([cx, cy, cz], [0, 0, 1], 5, [5, 0, 0], [0, 5, 0]);
+    const comp = stageRef.current.addComponentFromObject(shape);
+    comp.addRepresentation('surface');
+    boxCompRef.current = comp;
+  };
 
   return (
     <div>
@@ -171,6 +202,7 @@ const DockingViewer = () => {
           <input id="sizeX" type="number" defaultValue="5" style={{ width: '60px' }} />
           <input id="sizeY" type="number" defaultValue="5" style={{ width: '60px' }} />
           <input id="sizeZ" type="number" defaultValue="5" style={{ width: '60px' }} /> Å
+          <button id="removeCubeBtn">Remove Cube</button>
         </label>
 
         <button className="reset" onClick={() => window.resetViewer()}>Reset Viewer</button>
@@ -198,7 +230,7 @@ const DockingViewer = () => {
             <button>AutoDock Vina</button>
             <button>Vina - Carb</button>
             <button>Glytorch Vina</button>
-            <button onClick={() => window.addSolidBox()}>Add Transparent Box</button>
+            <button onClick={handleAddBox}>Add Transparent Box</button>
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/af_outputs';
 
 
 async function runDockerJob(jobId, filename, email, jobTitle) {
-
+try{
   
   if (!fs.existsSync(UPLOAD_FOLDER)) fs.mkdirSync(UPLOAD_FOLDER, { recursive: true });
    
@@ -21,8 +21,13 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
   if (!fs.existsSync(outputSubdir)) fs.mkdirSync(outputSubdir, { recursive: true })
   const logPath = path.join(outputSubdir, 'alphafold.log');
   const logStream = fs.createWriteStream(logPath);
+  try{
   await redisClient.hSet(`job:${jobId}`, 'status', 'running');
   await Job.updateOne({ jobId },{$set:  { status: 'running' }});
+  } catch (dberr) {
+    console.error(`Error updating job status for ${jobId}:`, dberr);
+  }
+  
   
      const dockerCommandArgs = [
       'run', '--rm', '--gpus', 'all',
@@ -39,13 +44,35 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
       '--output_dir=/home/mishra_lab/af_output'
     ];
   
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
+      try{
       const proc = spawn('docker', dockerCommandArgs);
+
+      proc.on('error', async(err) =>{
+        console.error(`Error starting Docker process for job ${jobId}:`, err);
+        const errorMsg = `Failed to start Docker process: ${err.message}`;
+        const status = `failed: ${errorMsg}`;
+        try {
+            await redisClient.hSet(`job:${jobId}`, { status });
+            await Job.updateOne({ jobId }, { 
+              $set: { 
+                status,
+                failedAt: new Date()
+              } 
+            });
+          } catch (dbErr) {
+            console.error(`Error updating error status for job ${jobId}:`, dbErr);
+          }
+          
+          logStream.end();
+          return resolve();
+      })
 
       proc.stdout.pipe(logStream);
       proc.stderr.pipe(logStream);
   
       proc.on('close', async (code) => {
+        try{
         logStream.end();
 
   
@@ -60,9 +87,13 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
   
   for (const { pattern, status } of errorPatterns) {
     if (pattern.test(logContent)) {
-      await redisClient.hSet(`job:${jobId}`, 'status', status);
-      await Job.updateOne({ jobId }, { $set: { status, failedAt: new Date() } });
-      return resolve();
+      try {
+                  await redisClient.hSet(`job:${jobId}`, 'status', status);
+                  await Job.updateOne({ jobId }, { $set: { status, failedAt: new Date() } });
+                } catch (dbErr) {
+                  console.error(`Error updating status for job ${jobId}:`, dbErr);
+                }
+                return resolve();
     }
   }
   
@@ -75,12 +106,10 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
       ? errorLines[errorLines.length - 1].trim() 
       : "Unexpected error occurred";
     
-    if (errorMsg.length > 200) {
-      errorMsg = errorMsg.substring(0, 197) + '...';
-    }
+    
     
     const status = `failed: ${errorMsg}`;
-    
+    try{
     await redisClient.hSet(`job:${jobId}`, { status });
     await Job.updateOne({ jobId }, { 
       $set: { 
@@ -88,22 +117,43 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
         failedAt: new Date()
       } 
     });
+  } catch (dbErr) {
+    console.error(`Error updating error status for job ${jobId}:`, dbErr);
+  }
     
     return resolve();
   }
   
   
-      // Create zip archive
+      try{
       const zipFilename = `${jobId}.zip`;
       const zipPath = path.join(OUTPUT_FOLDER, zipFilename);
       const output = fs.createWriteStream(zipPath);
       const archive = archiver('zip', { zlib: { level: 9 } });
+
+      archive.on('error', async (err) => {
+                console.error(`Error creating archive for job ${jobId}:`, err);
+                const status = `failed: Error creating results archive: ${err.message}`;
+                try {
+                  await redisClient.hSet(`job:${jobId}`, { status });
+                  await Job.updateOne({ jobId }, { 
+                    $set: { 
+                      status,
+                      failedAt: new Date()
+                    } 
+                  });
+                } catch (dbErr) {
+                  console.error(`Error updating status for job ${jobId}:`, dbErr);
+                }
+                resolve();
+              });
   
       archive.pipe(output);
         archive.directory(outputSubdir, false);
         archive.finalize();
   
         output.on('close', async () => {
+          try{
           await redisClient.hSet(`job:${jobId}`, {
             status: 'completed',
             completedAt: new Date().toISOString(),
@@ -117,9 +167,77 @@ async function runDockerJob(jobId, filename, email, jobTitle) {
             console.error('Error sending notification:', err);
           }
           resolve();
+        } catch (dbErr) {
+          console.error(`Error updating status for job ${jobId}:`, dbErr);
+          resolve();
+        }
         });
+      } catch (zipErr) {
+        console.error(`Error creating zip for job ${jobId}:`, zipErr);
+        const status = `failed: Error creating results archive: ${zipErr.message}`;
+        try {
+          await redisClient.hSet(`job:${jobId}`, { status });
+          await Job.updateOne({ jobId }, { 
+            $set: { 
+              status,
+              failedAt: new Date()
+            } 
+          });
+        } catch (dbErr) {
+          console.error(`Error updating status for job ${jobId}:`, dbErr);
+        }
+        resolve();
+      }
+    } catch (err) {
+      console.error(`Unexpected error processing job ${jobId}:`, err);
+            const status = `failed: Unexpected error: ${err.message}`;
+            try {
+              await redisClient.hSet(`job:${jobId}`, { status });
+              await Job.updateOne({ jobId }, { 
+                $set: { 
+                  status,
+                  failedAt: new Date()
+                } 
+              });
+            } catch (dbErr) {
+              console.error(`Error updating status for job ${jobId}:`, dbErr);
+            }
+            resolve();
+          }
       });
+    } catch (err) {
+      console.error(`Critical error starting job ${jobId}:`, err);
+        const status = `failed: System error: ${err.message}`;
+        try {
+          await redisClient.hSet(`job:${jobId}`, { status });
+          await Job.updateOne({ jobId }, { 
+            $set: { 
+              status,
+              failedAt: new Date()
+            } 
+          });
+        } catch (dbErr) {
+          console.error(`Error updating status for job ${jobId}:`, dbErr);
+        }
+        resolve();
+      }
     });
+  }catch (err) {
+    console.error(`Critical setup error for job ${jobId}:`, err);
+    const status = `failed: Setup error: ${err.message}`;
+    try {
+      await redisClient.hSet(`job:${jobId}`, { status });
+      await Job.updateOne({ jobId }, { 
+        $set: { 
+          status,
+          failedAt: new Date()
+        } 
+      });
+    } catch (dbErr) {
+      console.error(`Error updating status for job ${jobId}:`, dbErr);
+    }
+    return Promise.resolve();
   }
+}
 
   module.exports = runDockerJob;

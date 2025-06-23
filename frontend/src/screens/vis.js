@@ -39,7 +39,12 @@ function Vis() {
     if (!file) return false;
     const fileName = file.name.toLowerCase();
     const validExtensions = ['.fasta', '.fa', '.txt','.json'];
-    return validExtensions.some(ext => fileName.endsWith(ext));
+    const isValidExtension =  validExtensions.some(ext => fileName.endsWith(ext));
+    if(!isValidExtension){
+      throw new Error('Invalid file type. Only FASTA (.fasta, .fa) and JSON (.json) files are accepted.');
+
+    }
+    return true
   };
 
 
@@ -206,6 +211,7 @@ fetch(`${process.env.REACT_APP_API_URL}/predict`, {
           type="file"
           accept=".fasta,.fa,.json"
   onChange={e => {
+    try{
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       if (!validateFile(selectedFile)) {
@@ -221,6 +227,10 @@ fetch(`${process.env.REACT_APP_API_URL}/predict`, {
       setFastaText('');
       setError(''); 
     }
+  }catch (err) {
+    setError(`File upload error: ${err.message}`);
+    e.target.value = '';
+  }
   }}
         />
       </div>

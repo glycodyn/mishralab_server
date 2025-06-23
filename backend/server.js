@@ -28,6 +28,7 @@ mongoose.connect('mongodb://localhost:27017/alphafold', {
   console.log('MongoDB connected');
 }).catch(err => {
   console.error('MongoDB connection error:', err);
+  process.exit(1);
 });
 
 
@@ -54,6 +55,7 @@ const upload = multer({ storage });
 
 
 app.post('/predict', upload.single('file'), async (req, res) => {
+  try{
   const email = req.body.email;
   const jobTitle = req.body.jobTitle
   if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -69,19 +71,29 @@ app.post('/predict', upload.single('file'), async (req, res) => {
   const fastaFilename = `${jobId}${ext}`;
   const fastaPath = path.join(UPLOAD_FOLDER, fastaFilename);
 
-  fs.renameSync(inputFile.path, fastaPath); // Move file to final location
+  try {
+      fs.renameSync(inputFile.path, fastaPath);
+    } catch (err) {
+      console.error('Error moving uploaded file:', err);
+      return res.status(500).json({ error: 'File processing error' });
+    }
 
 
   let jsonFilename = `${jobId}.json`;
   const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
  
-  if (inputFile.mimetype !== 'application/json') {
-    const inputData = fs.readFileSync(fastaPath, 'utf8');
-    const convertedData = convertToAlphafoldJson(inputData, fastaFilename);
-    fs.writeFileSync(jsonPath, JSON.stringify(convertedData, null, 2));
-  } else{
-    fs.renameSync(fastaPath, jsonPath); 
-  }
+  try {
+      if (inputFile.mimetype !== 'application/json') {
+        const inputData = fs.readFileSync(fastaPath, 'utf8');
+        const convertedData = convertToAlphafoldJson(inputData, fastaFilename);
+        fs.writeFileSync(jsonPath, JSON.stringify(convertedData, null, 2));
+      } else {
+        fs.renameSync(fastaPath, jsonPath); 
+      }
+    } catch (err) {
+      console.error('Error converting to JSON:', err);
+      return res.status(400).json({ error: 'Invalid file format or content' });
+    }
 
   
 
@@ -109,6 +121,10 @@ await job.save();
   res.json({ jobId });
 
   jobQueue.add(() => runDockerJob(jobId, jsonFilename, email, jobTitle), jobId);
+} catch (err) {
+   console.error('Error in /predict endpoint:', err);
+    res.status(500).json({ error: 'Server error processing your request' });
+}
 });
 
 
@@ -119,6 +135,29 @@ app.get('/jobs/:email', async (req, res) => {
   const jobs = await Job.find({ email }).sort({ createdAt: -1 }).lean();
   res.json(jobs);
 });
+
+function setupGracefulShutdown(req,res, next){
+  const shutdown = async (signal) => {
+    console.log(`Received ${signal}. Shutting down gracefully...`);
+    // Close connections
+    try {
+      await mongoose.connection.close();
+      console.log('MongoDB connection closed');
+      
+      await redisClient.quit();
+      console.log('Redis connection closed');
+      
+      console.log('All connections closed successfully');
+    } catch (err) {
+      console.error('Error during graceful shutdown:', err);
+    }
+    process.exit(0);
+  };
+  setupGracefulShutdown();
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
 
 //app.get('/logs/:jobId', (req, res) => {
 //  const { jobId } = req.params;
@@ -167,6 +206,7 @@ app.get('/jobs/:email', async (req, res) => {
 
 // GET /download/:filename
 app.get('/download/:jobId', (req, res) => {
+  try{
   const jobId = req.params.jobId;
   const zipFilename = `${jobId}.zip`;
   const zipPath = path.join(OUTPUT_FOLDER, zipFilename);
@@ -186,9 +226,14 @@ app.get('/download/:jobId', (req, res) => {
       }
     });
   });
+}catch (err) {
+  console.error('Error in /download endpoint:', err);
+  res.status(500).json({ error: 'Server error processing your request' });
+}
 });
 
 app.get('/position/:jobId', (req, res) => {
+  try{
   const jobId = req.params.jobId;
   // Check if the job is currently running
   if (
@@ -201,9 +246,14 @@ app.get('/position/:jobId', (req, res) => {
   const position = jobQueue.queue.findIndex(fn => fn.jobId === jobId);
   if (position === -1) return res.json({ position: 0, running: false });
   res.json({ position: position + 1, running: false }); // 1-based index
+} catch (err) {
+  console.error('Error in /position endpoint:', err);
+  res.status(500).json({ error: 'Server error processing your request' });
+}
 });
 
 app.get(['/cif/jobId', '/cif/:jobId.cif'], (req, res) => {
+  try{
   const jobId = req.params.jobId.replace(/\.cif$/, '');
   const cifPath = path.join(OUTPUT_FOLDER, jobId, jobId, `${jobId}_model.cif`);
 
@@ -214,12 +264,22 @@ app.get(['/cif/jobId', '/cif/:jobId.cif'], (req, res) => {
     }
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', 'inline');
-    res.sendFile(cifPath);
+    res.sendFile(cifPath, (err) => {
+      if (err) {
+          console.error(`Error sending CIF file for job ${jobId}:`, err);
+          return res.status(500).json({ error: 'File delivery failed' });
+      }
+        });
   });
+}catch (err) {
+  console.error('Error in /cif endpoint:', err);
+  res.status(500).json({ error: 'Server error processing your request' });
+}
 }
 )
 
 app.get(['/confidence/jobID', '/confidence/:jobId.json'], (req, res) => {
+  try{
   const jobId = req.params.jobId.replace(/\.json$/, '');
   const jsonPath = path.join(OUTPUT_FOLDER, jobId, jobId, `${jobId}_confidences.json`);
   console.log('Looking for confidence JSON at:', jsonPath); // <-- Add this line
@@ -231,8 +291,55 @@ app.get(['/confidence/jobID', '/confidence/:jobId.json'], (req, res) => {
     }
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'inline');
-    res.sendFile(jsonPath);
+    res.sendFile(jsonPath, (err) => {
+       if (err) {
+          console.error(`Error sending JSON file for job ${jobId}:`, err);
+          return res.status(500).json({ error: 'File delivery failed' });
+        }
+    })
   });
+}catch (err) {
+  console.error('Error in /confidence endpoint:', err);
+  res.status(500).json({ error: 'Server error processing your request' });
+}
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    // Check MongoDB connection
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = dbState === 1 ? 'connected' : 'disconnected';
+    
+    // Check Redis connection
+    let redisStatus = 'disconnected';
+    try {
+      const pingResult = await redisClient.ping();
+      redisStatus = pingResult === 'PONG' ? 'connected' : 'error';
+    } catch (err) {
+      redisStatus = 'error';
+    }
+    
+    if (dbStatus === 'connected' && redisStatus === 'connected') {
+      res.json({
+        status: 'healthy',
+        mongo: dbStatus,
+        redis: redisStatus,
+        uptime: process.uptime()
+      });
+    } else {
+      res.status(500).json({
+        status: 'unhealthy',
+        mongo: dbStatus,
+        redis: redisStatus,
+        uptime: process.uptime()
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
 });
 
 

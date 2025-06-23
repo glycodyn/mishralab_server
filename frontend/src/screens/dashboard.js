@@ -29,7 +29,7 @@ function Dashboard() {
       ]
     },
     {
-      title: "AutoDock Vina (Coming Soon)",
+      title: "AutoDock Vina ",
       description: "Molecular docking simulation for drug discovery applications. Predict how small molecules bind to target proteins.",
       icon: "🔮",
       link: "#",

@@ -12,7 +12,7 @@ function App() {
   return (
     <Router>
       <div className="App">
-        < div classname="header-container">
+        < div className="header-container">
         <Header>
           <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
             <Link to="/" className='nav-link'>Home</Link>

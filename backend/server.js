@@ -153,11 +153,12 @@ function setupGracefulShutdown(req,res, next){
     }
     process.exit(0);
   };
-  setupGracefulShutdown();
+ 
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
+ setupGracefulShutdown();
 
 //app.get('/logs/:jobId', (req, res) => {
 //  const { jobId } = req.params;

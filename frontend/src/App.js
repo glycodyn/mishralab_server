@@ -6,6 +6,7 @@ import Vis from './screens/vis';
 import Header from './utils/header';
 import JobViewer from './screens/render';
 import './styles/nav.css'
+import DockingViewer from './screens/dockingViewer';
 
 function App() {
   
@@ -18,6 +19,7 @@ function App() {
             <Link to="/" className='nav-link'>Home</Link>
             <Link to="/glygen" className='nav-link'>Visualize Protein</Link>
             <Link to="/vis" className='nav-link'>AlphaFold3</Link>
+            <Link to="/docking" className='nav-link'>Docking Viewer</Link>
           </nav>
         </Header>
         </div>
@@ -29,6 +31,7 @@ function App() {
             <Route path="/glygen" element={<Glygen />} />
             <Route path ="/vis" element={<Vis />} />
             <Route path="/viewer" element={<JobViewer />} />
+            <Route path="/docking" element={<DockingViewer />} />
           </Routes>
         </main>
       </div>

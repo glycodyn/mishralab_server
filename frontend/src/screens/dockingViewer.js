@@ -253,6 +253,7 @@ import { Vec3 } from 'molstar/lib/mol-math/linear-algebra';
 function DockingViewer() {
   const viewerRef = useRef(null);
   const pluginRef = useRef(null);
+   const structureRef = useRef(null);
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -323,12 +324,14 @@ function DockingViewer() {
               const centroid = sum.map(v => +(v / count).toFixed(2));
           setCenter({ x: centroid[0], y: centroid[1], z: centroid[2] });
           console.log(`Residue centroid at (${centroid[0]}, ${centroid[1]}, ${centroid[2]})`);
+          const loci = StructureElement.Loci(structure, unit, Int32Array.of(loc.element));
+          console.log('Drawing bounding box for loci:', loci);
 
-          drawBoundingBox(pluginRef.current, {
+          drawBoundingBox(pluginRef.current, structureRef.current, {
             x: centroid[0],
             y: centroid[1],
             z: centroid[2]
-          });
+          }, 'docking-box', loci.structure);
         } else {
           console.warn('No atoms found for residue!');
         }
@@ -341,6 +344,8 @@ function DockingViewer() {
   }, [pluginsLoaded]);
 
 
+
+
   // Load protein structure
   const handleProteinUpload = async (e) => {
     const file = e.target.files[0];
@@ -350,10 +355,20 @@ function DockingViewer() {
       setError('');
       try {
         const url = URL.createObjectURL(file);
-        await loadDockingStructure(pluginRef.current, url, { format: 'pdb' });
+        const preset = await loadDockingStructure(pluginRef.current, url, { format: 'pdb' });
+        if(preset && preset.structureRef){
+            structureRef.current = preset.structureRef;
+            console.log('Loaded structure ref:', structureRef);
+
+        }else{
+            console.log('No structure ref found in preset');
+        }
+        
         pluginRef.current.managers.interactivity.setProps({ mode: 'select' });
         setSuccessMessage(`Protein ${file.name} loaded`);
         setTimeout(() => setSuccessMessage(''), 3000);
+        
+
       } catch (err) {
         setError('Failed to load protein');
       }

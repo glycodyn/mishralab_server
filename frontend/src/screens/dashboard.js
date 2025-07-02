@@ -5,8 +5,8 @@ import '../styles/dashboard.css';
 function Dashboard() {
   const services = [
     {
-      title: "AlphaFold3 Protein Structure Prediction",
-      description: "Generate accurate 3D protein structure predictions using Meta's AlphaFold3 technology. Upload FASTA sequences or files to predict protein structures with confidence scores.",
+      title: "Protein Structure Prediction",
+      description: "Generate accurate 3D protein structure predictions using Google's AlphaFold3 technology. Upload FASTA sequences or files to predict protein structures with confidence scores.",
       icon: "🧬",
       link: "/vis",
       features: [
@@ -17,19 +17,20 @@ function Dashboard() {
       ]
     },
     {
-      title: "Protein Visualization & Analysis",
-      description: "Explore and analyze protein structures using our interactive visualization tools. Search for proteins via UniProt IDs and view their 3D structures in various representations.",
-      icon: "🔬",
-      link: "/glygen",
+      title: "Protein Design",
+      description: "Design protein sequences with atomic context using LigandMPNN. Upload PDB files and select model options for advanced protein-ligand design.",
+      icon: "🧪",
+      link: "/ligandMPNN",
       features: [
-        "Search proteins by UniProt ID",
-        "View protein sequences and structural information",
-        "Multiple visualization styles (cartoon, stick, surface)",
-        "Color schemes by property or residue type"
-      ]
+        "Ligand-aware protein sequence design",
+        "Multiple model and checkpoint options",
+        "Batch and temperature controls",
+        "Downloadable results and statistics"
+      ],
+      
     },
     {
-      title: "AutoDock Vina ",
+      title: "Protein-glycan Docking",
       description: "Molecular docking simulation for drug discovery applications. Predict how small molecules bind to target proteins.",
       icon: "🔮",
       link: "#",
@@ -46,9 +47,9 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h1>Biomedical Informatics & AI Platform</h1>
+        <h1>Biomolecular Simulation and Machine Learning Group Workbench</h1>
         <p>
-          Welcome to the University of Mississippi Biomedical Engineering research computing platform.
+          Welcome to the Biomolecular Simulation and Machine Learning Group Workbench.
           Our tools help researchers analyze proteins, predict structures, and accelerate drug discovery.
         </p>
       </div>
@@ -86,12 +87,12 @@ function Dashboard() {
       <div className="dashboard-footer">
         <h2>About Our Platform</h2>
         <p>
-          The University of Mississippi Biomedical Engineering computation platform integrates cutting-edge
+          The Biomolecular Simulation and Machine Learning Group Workbench integrates cutting-edge
           AI and molecular visualization technologies to accelerate research in structural biology
           and drug discovery. Our tools are designed to be accessible to researchers at all technical levels.
         </p>
         <p>
-          For questions or support, please contact <a href="mailto:support@bme.olemiss.edu">support@bme.olemiss.edu</a>
+          For questions or support, please contact <a href="mailto:sushil@olemiss.edu">sushil@olemiss.edu</a>
         </p>
       </div>
     </div>

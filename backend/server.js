@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const Job = require('./config/mongoConfig.js'); 
+const {AlphaFold3Job} = require('./config/mongoConfig.js'); 
 const multer = require('multer');
 const cors = require('cors');
 const fs = require('fs');
@@ -13,8 +13,11 @@ const convertToAlphafoldJson = require('./utils/convertToJson.js');
 const runDockerJob = require('./utils/runDockerJob.js'); 
 const redisClient = require('./utils/redisClient.js')
 const  sendNotification = require('./utils/emailer.js')
+const ligandMPNNRouter = require('./routes/ligandMPNN.js')
+const {router: authenticationRouter} = require('./routes/authentication.js');
+const runLigandMPNNDocker = require('./utils/runLigandMPNNDocker.js')
 const app = express();
-
+app.use(express.json());
 app.use(cors({
   origin: '*', 
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -52,12 +55,14 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-
+app.use('/ligandmpnn', ligandMPNNRouter);
+app.use('/user', authenticationRouter);
 
 app.post('/predict', upload.single('file'), async (req, res) => {
   try{
   const email = req.body.email;
   const jobTitle = req.body.jobTitle
+  const userId = req.body.userId 
   if (!email) return res.status(400).json({ error: 'Email is required' });
   const inputFile = req.file;
   if (!inputFile) {
@@ -97,9 +102,10 @@ app.post('/predict', upload.single('file'), async (req, res) => {
 
   
 
-const job = new Job({
+const job = new AlphaFold3Job({
   jobId,
   email,
+  userId,
   jobTitle,
   filename: jsonFilename,
   status: 'queued',
@@ -132,7 +138,7 @@ await job.save();
 
 app.get('/jobs/:email', async (req, res) => {
   const email = req.params.email;
-  const jobs = await Job.find({ email }).sort({ createdAt: -1 }).lean();
+  const jobs = await AlphaFold3Job.find({ email }).sort({ createdAt: -1 }).lean();
   res.json(jobs);
 });
 
@@ -351,10 +357,10 @@ app.listen(PORT, '0.0.0.0', async () => {
   
   try {
     
-    await Job.updateMany({ status: 'running' }, { $set: { status: 'queued' } });
+    await AlphaFold3Job.updateMany({ status: 'running' }, { $set: { status: 'queued' } });
 
    
-    const queuedJobs = await Job.find({ status: 'queued' }).sort({ createdAt: 1 }).lean();
+    const queuedJobs = await AlphaFold3Job.find({ status: 'queued' }).sort({ createdAt: 1 }).lean();
     console.log(`Found ${queuedJobs.length} queued jobs at startup`);
     for (const job of queuedJobs) {
       console.log(`Queueing job at startup: ${job.jobId}`);
@@ -363,4 +369,6 @@ app.listen(PORT, '0.0.0.0', async () => {
   } catch (err) {
     console.error('Error starting queued jobs at startup:', err);
   }
+
+  
 });

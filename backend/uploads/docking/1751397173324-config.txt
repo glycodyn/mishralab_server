@@ -1,0 +1,14 @@
+receptor = 1751397151055-pocket.pdbqt
+      ligand = 1751397153654-ligand-b (2).pdbqt
+      
+      center_x = 150.31
+      center_y = 139.25
+      center_z = 174.49
+      
+      size_x = 10
+      size_y = 10
+      size_z = 10
+      
+      exhaustiveness = 8
+      num_modes = 9
+      energy_range = 3

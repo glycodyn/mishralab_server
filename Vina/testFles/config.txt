@@ -1,0 +1,14 @@
+receptor = pocket.pdb
+ligand = ligand-b (2).pdbqt
+
+center_x = 0
+center_y = 0
+center_z = 0
+
+size_x = 20
+size_y = 20
+size_z = 20
+
+exhaustiveness = 8
+num_modes = 9
+energy_range = 3

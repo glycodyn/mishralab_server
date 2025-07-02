@@ -13,13 +13,16 @@ const convertToAlphafoldJson = require('./utils/convertToJson.js');
 const runDockerJob = require('./utils/runDockerJob.js'); 
 const redisClient = require('./utils/redisClient.js')
 const  sendNotification = require('./utils/emailer.js')
+const autoDockVinaRoutes = require('./routes/autoDockVina');
 const app = express();
+
 
 app.use(cors({
   origin: '*', 
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
 }));
+app.use('/vina', autoDockVinaRoutes);
 
 mongoose.connect('mongodb://localhost:27017/alphafold', {
   useNewUrlParser: true,

@@ -121,13 +121,16 @@ router.post('/dock', async (req, res) => {
         const result = await runAutoDockVina(receptorPath, ligandPath, configPath, outputPath);
         
         res.status(200).json({
-            success: true,
-            message: 'Docking completed successfully',
-            outputPath: outputPath,
-            details: result.stdout,
-            scoreTable: result.scoreTable
-
-        });
+          success: true,
+          message: 'Docking completed successfully',
+          outputPath,
+          receptorPath,
+          ligandPath,
+          configPath,
+          details: result.stdout,
+          scoreTable: result.scoreTable
+      });
+      
     } catch (error) {
         console.error('Docking error:', error);
         res.status(500).json({
@@ -190,5 +193,26 @@ router.post('/upload-dock', multiUpload, async (req, res) => {
       }
     });
   });
+
+router.post('/cleanup', (req, res) => {
+  const { receptorPath, ligandPath, configPath, outputPath } = req.body;
+
+  const filesToDelete = [receptorPath, ligandPath, configPath, outputPath];
+  let deleted = [];
+
+  for (const file of filesToDelete) {
+    if (file && fs.existsSync(file)) {
+      try {
+        fs.unlinkSync(file);
+        deleted.push(file);
+      } catch (err) {
+        console.error(`❌ Failed to delete ${file}:`, err);
+      }
+    }
+  }
+
+  res.json({ success: true, deleted });
+});
+
 
 module.exports = router;

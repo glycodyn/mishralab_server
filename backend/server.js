@@ -21,7 +21,8 @@ app.use(express.json());
 app.use(cors({
   origin: '*', 
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 mongoose.connect('mongodb://localhost:27017/alphafold', {

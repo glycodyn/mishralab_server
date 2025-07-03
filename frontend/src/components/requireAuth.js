@@ -7,6 +7,8 @@ export default function RequireAuth({ children }) {
 
   if (loading) return <div>Loading...</div>;
   if (!user) return <LoginSignup />; // Show login/signup form if not authenticated
+    if (user.newPassword) return <LoginSignup/>; // Force to login until password changed
+
 
   return children;
 }

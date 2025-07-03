@@ -20,33 +20,33 @@ function verifyJWT(req, res, next) {
 }
 
 router.post('/signup', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: 'Email and password required' });
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: 'Username and password required' });
   try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(409).json({ error: 'Email already exists' });
+    const existing = await User.findOne({ username });
+    if (existing) return res.status(409).json({ error: 'username already exists' });
     const hash = await bcrypt.hash(password, 10);
-    const user = new User({ email, password: hash });
+    const user = new User({ username, password: hash });
     await user.save();
-    const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { email: user.email, _id: user._id } });
+    const token = jwt.sign({ _id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { username: user.username, _id: user._id } });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: 'Email and password required' });
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: 'username and password required' });
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { email: user.email, _id: user._id } });
+    const token = jwt.sign({ _id: user._id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { username: user.username, _id: user._id, newPassword: user.newPassword, email:user.email } });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -61,16 +61,35 @@ router.post('/google', async (req, res) => {
       audience: GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
-    const email = payload.email;
-    let user = await User.findOne({ email });
+    const username = payload.username;
+    let user = await User.findOne({ username });
     if (!user) {
-      user = new User({ email, password: '' });
+      user = new User({ username, password: '' });
       await user.save();
     }
-    const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { email: user.email, _id: user._id } });
+    const token = jwt.sign({ _id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { username: user.username, _id: user._id } });
   } catch (err) {
     res.status(401).json({ error: 'Google authentication failed' });
+  }
+});
+
+router.post('/change-password', verifyJWT, async (req, res) => {
+ const {newPassword} = req.body;
+ if (!newPassword)
+   return res.status(400).json({ error: 'New password required' });
+  try{
+    const hash = await bcrypt.hash(newPassword, 10);
+   const result = await User.updateOne(
+      { _id: req.user._id },
+      { $set: { password: hash, newPassword: false } }
+    );
+    res.json({ message: 'Password changed successfully' });
+    console.log('Password changed successfully', result);
+
+  }catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  console.error('Error changing password:', err);
   }
 });
 

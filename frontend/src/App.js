@@ -10,6 +10,7 @@ import DockingViewer from './screens/dockingViewer';
 import LigandMPNNScreen from './screens/ligandMPNN';
 import { AuthProvider } from './context/authCOntext';
 import RequireAuth from './components/requireAuth';
+import LoginSignup from './utils/authentication';
 
 function App() {
   
@@ -64,6 +65,7 @@ function App() {
                   </RequireAuth>
                 }
               />
+              <Route path='/login' element={<LoginSignup />} />
             </Routes>
           </main>
         </div>

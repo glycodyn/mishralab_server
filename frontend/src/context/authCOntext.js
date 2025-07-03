@@ -22,15 +22,17 @@ export function AuthProvider({ children }) {
         }
     }, [user, token]);
 
+ 
+
     // Signup
-    const signup = async (email, password) => {
+    const signup = async (username, password) => {
         setLoading(true);
         setError(null);
         try {
             const res = await fetch(`${process.env.REACT_APP_API_URL}/user/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Signup failed');
@@ -44,14 +46,14 @@ export function AuthProvider({ children }) {
     };
 
     // Login
-    const login = async (email, password) => {
+    const login = async (username, password) => {
         setLoading(true);
         setError(null);
         try {
             const res = await fetch(`${process.env.REACT_APP_API_URL}/user/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Login failed');

@@ -21,8 +21,10 @@ const LigandMPNNJobSchema = new mongoose.Schema({
 });
 
 const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  email:{type: String, required: true, unique:true},
+  newPassword:{type: Boolean, default: false}, 
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date, default: Date.now },
   

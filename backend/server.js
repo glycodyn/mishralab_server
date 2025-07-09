@@ -15,7 +15,10 @@ const redisClient = require('./utils/redisClient.js')
 const  sendNotification = require('./utils/emailer.js')
 const ligandMPNNRouter = require('./routes/ligandMPNN.js')
 const {router: authenticationRouter} = require('./routes/authentication.js');
-const runLigandMPNNDocker = require('./utils/runLigandMPNNDocker.js')
+const boltzROuter = require('./routes/boltz.js');
+const glycanRouter = require('./routes/fetchGlycans.js')
+const runLigandMPNNDocker = require('./utils/runLigandMPNNDocker.js');
+const { json } = require('stream/consumers');
 const app = express();
 app.use(express.json());
 app.use(cors({
@@ -58,6 +61,8 @@ const upload = multer({ storage });
 
 app.use('/ligandmpnn', ligandMPNNRouter);
 app.use('/user', authenticationRouter);
+app.use('/boltz', boltzROuter)
+app.use('/glycan', glycanRouter);
 
 app.post('/predict', upload.single('file'), async (req, res) => {
   try{
@@ -87,6 +92,19 @@ app.post('/predict', upload.single('file'), async (req, res) => {
 
   let jsonFilename = `${jobId}.json`;
   const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
+
+  try{
+    jsonData = fs.readFileSync(jsonPath, 'utf8');
+    let jsonObject = JSON.parse(jsonData);
+
+    if(jsonObject.name!==jobId){
+      jsonObject.name = jobId;
+      fs.writeFileSync(jsonPath, JSON.stringify(jsonObject, null, 2));
+    }
+  }catch (err) {
+    console.error('Error reading or parsing JSON file:', err);
+    return res.status(500).json({ error: 'Error processing JSON file' });
+  }
  
   try {
       if (inputFile.mimetype !== 'application/json') {

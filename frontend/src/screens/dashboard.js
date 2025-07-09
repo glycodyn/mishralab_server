@@ -17,6 +17,19 @@ function Dashboard() {
       ]
     },
     {
+      title: "Multi-Entity Protein-Ligand Design",
+      description: "Design and optimize protein, DNA, RNA, and ligand complexes using the Boltz2 deep learning platform. Boltz2 supports multi-entity inputs, advanced constraints, and property-driven design for next-generation biomolecular engineering.",
+      icon: "🔗",
+      link: "/boltz",
+      features:[
+        "Multi-chain and multi-ligand support",
+         "Sequence, structure, and property-based design",
+         "YAML and FASTA input options",
+         "Downloadable results and job tracking"
+
+      ],
+    },
+    {
       title: "Protein Design",
       description: "Design protein sequences with atomic context using LigandMPNN. Upload PDB files and select model options for advanced protein-ligand design.",
       icon: "🧪",

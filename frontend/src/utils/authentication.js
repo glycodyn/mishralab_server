@@ -10,7 +10,7 @@ export default function LoginSignup() {
   const [newPassword, setNewPassword] = useState('');
   const [changePasswordError, setChangePasswordError] = useState('');
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
-  const [loginComplete, setLoginComplete] = useState(false);
+  
 
 
 

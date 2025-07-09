@@ -27,6 +27,9 @@ try{
   } catch (dberr) {
     console.error(`Error updating job status for ${jobId}:`, dberr);
   }
+
+  const uid = process.getuid();
+  const gid = process.getgid();
   
   
       const dockerCommandArgs = [

@@ -11,6 +11,7 @@ import LigandMPNNScreen from './screens/ligandMPNN';
 import { AuthProvider } from './context/authCOntext';
 import RequireAuth from './components/requireAuth';
 import LoginSignup from './utils/authentication';
+import Boltz from './screens/Boltz2';
 
 function App() {
   
@@ -25,6 +26,7 @@ function App() {
                 <Link to="/vis" className='nav-link'>AlphaFold3</Link>
                 <Link to="/ligandMPNN" className='nav-link'>Ligand MPNN</Link>
                 <Link to="/docking" className='nav-link'>Docking Viewer</Link>
+                <Link to="/boltz" className='nav-link'>Complex prediction</Link>
                 
               </nav>
             </Header>
@@ -62,6 +64,14 @@ function App() {
                 element={
                   <RequireAuth>
                     <LigandMPNNScreen />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path='/boltz'
+                element={
+                  <RequireAuth>
+                    <Boltz />
                   </RequireAuth>
                 }
               />

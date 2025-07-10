@@ -12,6 +12,7 @@ import { AuthProvider } from './context/authCOntext';
 import RequireAuth from './components/requireAuth';
 import LoginSignup from './utils/authentication';
 import Boltz from './screens/Boltz2';
+import BoltzViewer from './screens/Boltz_viewer';
 
 function App() {
   
@@ -72,6 +73,14 @@ function App() {
                 element={
                   <RequireAuth>
                     <Boltz />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path='/boltz-viewer'
+                element={
+                  <RequireAuth>
+                    <BoltzViewer />
                   </RequireAuth>
                 }
               />

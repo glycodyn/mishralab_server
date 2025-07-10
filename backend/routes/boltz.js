@@ -126,6 +126,33 @@ router.get('/download/:jobId', async (req, res) => {
 
 })
 
+//serve the cif file for mol*  viewer
+router.get('/cif/:jobId', async (req, res) => {
+    try{
+        const jobId = req.params.jobId;
+        const cifPath = path.join(OUTPUT_FOLDER, jobId,`boltz_results_${jobId}`, 'predictions',jobId ,`${jobId}_model_0.cif`);
+        console.log('Looking for cif file at:', cifPath); 
+        
+          fs.access(cifPath, fs.constants.F_OK, (err) => {
+            if (err) {
+              console.error(`CIF file for job ${jobId} not found`);
+              return res.status(404).json({ error: 'File not found' });
+            }
+            res.setHeader('Content-Type', 'chemical/x-cif');
+            res.setHeader('Content-Disposition', 'inline');
+            res.sendFile(cifPath, (err) => {
+               if (err) {
+                  console.error(`Error sending CIF file for job ${jobId}:`, err);
+                  return res.status(500).json({ error: 'File delivery failed' });
+                }
+            })
+          });
+        }catch (err) {
+          console.error('Error in /cif endpoint:', err);
+          res.status(500).json({ error: 'Server error processing your request' });
+        }
+    })
+
 
 
 

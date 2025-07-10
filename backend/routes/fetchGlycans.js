@@ -42,7 +42,7 @@ if (cacheResults.length == 0) {
     for (const id of ids) {
         
         try{
-            const detailUrl = `https://api.glygen.org/glycan/detail/${id}/`;
+            const detailUrl = `${process.env.GLYGEN_URL}/detail/${id}/`;
             const detailResp = await axios.get(detailUrl);
             console.log(`Fetched details for ${id}:`, detailResp.data);
             
@@ -83,6 +83,21 @@ if (cacheResults.length == 0) {
         }
     } catch (e) {
         res.status(404).json({ error: "Accession not found or API error." });
+    }
+});
+
+router.get('/image/:ac', async (req, res) => {
+    const ac = req.params.ac;
+    try{
+        console.log(`Fetching image for ${ac}`);
+        const imageUrl = `${process.env.GLYGEN_URL}/image/${ac}/`;
+        const imageResp = await axios.get(imageUrl, {responseType: 'stream'})
+            res.setHeader('Content-Type', 'image/png');
+             res.set('Access-Control-Allow-Origin', '*');
+            imageResp.data.pipe(res);
+    }catch (e) {
+        console.error(`Error fetching image for ${ac}:`, e.message);
+        res.status(404).send("Image not found or API error." );
     }
 });
 

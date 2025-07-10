@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Spinner, Alert } from 'react-bootstrap';
 import { useAuth } from '../context/authCOntext';
+import { initViewer, loadStructure } from '../utils/boltzViewer';
+import {BoltzViewer} from '../screens/Boltz_viewer'
 import yaml from 'js-yaml';
 import '../styles/boltz.css';
 
@@ -19,6 +21,8 @@ const Boltz2 = () => {
     const [manualAc, setManualAc] = useState('');
   const [manualSmiles, setManualSmiles] = useState('');
   const [manualError, setManualError] = useState('');
+  const [glycanImages, setGlycanImages] = useState({});
+const [glycanImageErrors, setGlycanImageErrors] = useState({});
 
   const [sequences, setSequences] = useState([
     { entityType: '', id: '', sequence: '', smiles: '', ccd: '', msa: '', cyclic: false }
@@ -71,6 +75,16 @@ const Boltz2 = () => {
     }
   };
 
+  const handleViewComplex = async (jobId) => {
+  const cifUrl = `${process.env.REACT_APP_API_URL}/boltz/cif/${jobId}`;
+  try {
+    const plugin = await initViewer('boltz-molstar-viewer');
+    await loadStructure(plugin, cifUrl, { format: 'mmcif', isBinary: false });
+  } catch (err) {
+    alert('Could not load structure: ' + err.message);
+  }
+};
+
   function toYAML(obj, indent = 0) {
     const pad = '  '.repeat(indent);
     if (Array.isArray(obj)) {
@@ -88,6 +102,24 @@ const Boltz2 = () => {
       return `${pad}${obj}`;
     }
   }
+
+  const fetchGlycanImage = async (ac, idx) => {
+  if (!ac) return;
+  setGlycanImageErrors(prev => ({ ...prev, [idx]: '' }));
+  setGlycanImages(prev => ({ ...prev, [idx]: '' }));
+  try {
+    // Just set the image URL, let the browser handle loading
+    setGlycanImages(prev => ({
+      ...prev,
+      [idx]: `${process.env.REACT_APP_API_URL}/glycan/image/${ac}`
+    }));
+  } catch (e) {
+    setGlycanImageErrors(prev => ({
+      ...prev,
+      [idx]: 'Image not available'
+    }));
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -297,8 +329,9 @@ const Boltz2 = () => {
     onChange={e => {
       const glycan = glycans.find(g => g.name === e.target.value);
       if (glycan) {
-        
         handleSeqChange(idx, 'smiles', glycan.smiles);
+        fetchGlycanImage(glycan.name, idx)
+        setManualSmiles('')
       }
     }}
   >
@@ -320,11 +353,26 @@ const Boltz2 = () => {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => fetchSmilesByAc(manualAc, idx)}
+                    onClick={() => {fetchSmilesByAc(manualAc, idx)
+                        fetchGlycanImage(manualAc, idx)
+                    }}
                   >
                     Get SMILES
                   </Button>
                 </div>
+                {glycanImages[idx] && (
+      <div style={{ marginTop: 8 }}>
+        <img
+          src={glycanImages[idx]}
+          alt="Glycan structure"
+          style={{ maxWidth: 180, maxHeight: 120, border: '1px solid #ccc', background: '#fff' }}
+          onError={() => setGlycanImageErrors(prev => ({ ...prev, [idx]: 'Image not available' }))}
+        />
+        {glycanImageErrors[idx] && (
+          <div style={{ color: 'red', fontSize: 12 }}>{glycanImageErrors[idx]}</div>
+        )}
+      </div>
+    )}
                 {manualSmiles && (
                   <div style={{ color: 'green', fontSize: 12, marginTop: 4 }}>
                     SMILES: {manualSmiles}
@@ -398,6 +446,7 @@ const Boltz2 = () => {
       </form>
       <hr />
       <h3>Your Boltz2 Jobs</h3>
+      
       {searchResults.length > 0 ? (
         <div className="vis-search-results" style={{ marginTop: '1rem' }}>
           <ul>
@@ -411,12 +460,20 @@ const Boltz2 = () => {
                 <br />
                 Submitted: {job.createdAt ? new Date(job.createdAt).toLocaleString() : 'N/A'}
                 {job.status === 'completed' && (
+                    <>
                   <button
                     style={{ marginLeft: '1rem' }}
                     onClick={() => handleDownload(job.jobId)}
                   >
                     Download
                   </button>
+                  <Button
+                    style={{ marginLeft: '1rem' }}
+                    onClick={() => window.open(`/boltz-viewer?jobId=${job.jobId}`, '_blank', 'noopener,noreferrer')}
+                    >
+                        View Complex
+                  </Button>
+                  </>
                 )}
               </li>
             ))}

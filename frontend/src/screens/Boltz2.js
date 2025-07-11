@@ -5,8 +5,10 @@ import { initViewer, loadStructure } from '../utils/boltzViewer';
 import {BoltzViewer} from '../screens/Boltz_viewer'
 import yaml from 'js-yaml';
 import '../styles/boltz.css';
+const emptyConstraint = { type: 'bond', atom1: '', atom2: '', binder: '', contacts: '', max_distance: '', token1: '', token2: '' };
 
 const Boltz2 = () => {
+    
   const { user } = useAuth();
   const email = user?.email || '';
   const userId = user?._id || '';
@@ -27,7 +29,7 @@ const [glycanImageErrors, setGlycanImageErrors] = useState({});
   const [sequences, setSequences] = useState([
     { entityType: '', id: '', sequence: '', smiles: '', ccd: '', msa: '', cyclic: false }
   ]);
-  const [constraints, setConstraints] = useState([]);
+const [constraints, setConstraints] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [properties, setProperties] = useState([]);
 
@@ -75,33 +77,31 @@ const [glycanImageErrors, setGlycanImageErrors] = useState({});
     }
   };
 
-  const handleViewComplex = async (jobId) => {
-  const cifUrl = `${process.env.REACT_APP_API_URL}/boltz/cif/${jobId}`;
-  try {
-    const plugin = await initViewer('boltz-molstar-viewer');
-    await loadStructure(plugin, cifUrl, { format: 'mmcif', isBinary: false });
-  } catch (err) {
-    alert('Could not load structure: ' + err.message);
-  }
-};
+ 
 
-  function toYAML(obj, indent = 0) {
-    const pad = '  '.repeat(indent);
-    if (Array.isArray(obj)) {
-      return obj.map(item => `${pad}- ${toYAML(item, indent + 1).trimStart()}`).join('\n');
-    } else if (typeof obj === 'object' && obj !== null) {
-      return Object.entries(obj)
-        .filter(([k, v]) => v !== '' && v !== undefined && !(Array.isArray(v) && v.length === 0))
-        .map(([k, v]) => {
-          if (Array.isArray(v) || typeof v === 'object') {
-            return `${pad}${k}:\n${toYAML(v, indent + 1)}`;
-          }
-          return `${pad}${k}: ${v}`;
-        }).join('\n');
-    } else {
-      return `${pad}${obj}`;
-    }
+function toYAML(obj, indent = 0) {
+  const pad = '  '.repeat(indent);
+  if (Array.isArray(obj)) {
+    return obj.map(item => {
+      if (typeof item === 'object' && item !== null) {
+        return `${pad}- ${toYAML(item, indent + 1).trimStart()}`;
+      } else {
+        return `${pad}- ${item}`;
+      }
+    }).join('\n');
+  } else if (typeof obj === 'object' && obj !== null) {
+    return Object.entries(obj)
+      .filter(([k, v]) => v !== '' && v !== undefined && !(Array.isArray(v) && v.length === 0))
+      .map(([k, v]) => {
+        if (Array.isArray(v) || (typeof v === 'object' && v !== null)) {
+          return `${pad}${k}:\n${toYAML(v, indent + 1)}`;
+        }
+        return `${pad}${k}: ${v}`;
+      }).join('\n');
+  } else {
+    return `${pad}${obj}`;
   }
+}
 
   const fetchGlycanImage = async (ac, idx) => {
   if (!ac) return;
@@ -121,76 +121,111 @@ const [glycanImageErrors, setGlycanImageErrors] = useState({});
   }
 };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResult(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setResult(null);
 
-    let yamlFile = null;
+  let yamlFile = null;
 
-    if (inputFile) {
-      yamlFile = inputFile;
-    } else {
-      const yamlSequences = sequences
-      .filter(seq => seq.entityType && seq.id)
-      .map(seq => {
-        const { entityType, ...rest } = seq;
-        // Remove empty fields
-        const clean = Object.fromEntries(
-          Object.entries(rest).filter(([k, v]) =>
-            v !== '' && v !== undefined && !(typeof v === 'boolean' && v === false)
-          )
-        );
-        return { [entityType]: clean };
-      });
+  if (inputFile) {
+    yamlFile = inputFile;
+  } else {
+   const yamlSequences = sequences
+  .filter(seq => seq.entityType && seq.id && seq.sequence) // skip if any required field is empty
+  .map(seq => {
+    const { entityType, ...rest } = seq;
+    const clean = Object.fromEntries(
+      Object.entries(rest).filter(([k, v]) =>
+        v !== '' && v !== undefined && !(typeof v === 'boolean' && v === false)
+      )
+    );
+    return { [entityType]: clean };
+  });
 
-       let parsedProperties = [];
-    for (const p of properties.filter(p => p)) {
-      try {
-        const parsed = yaml.load(p);
-        parsedProperties.push(parsed);
-      } catch (e) {
-        setError('Invalid YAML in properties: ' + e.message);
-        setLoading(false);
-        return;
-      }
+const yamlTemplates = templates
+  .map(t => {
+    let entry = {};
+    if (t.cif) entry.cif = `/inputs/${t.cif}`;
+    if (t.chain_id) {
+      entry.chain_id = t.chain_id.includes(',')
+        ? t.chain_id.split(',').map(s => s.trim()).filter(Boolean)
+        : t.chain_id.trim();
     }
+    if (t.template_id) {
+      entry.template_id = t.template_id.includes(',')
+        ? t.template_id.split(',').map(s => s.trim()).filter(Boolean)
+        : t.template_id.trim();
+    }
+    // Only include if at least one field is present
+    return Object.keys(entry).length > 0 ? entry : null;
+  })
+  .filter(Boolean);
+
+const yamlConstraints = constraints
+  .map(c => {
+    if (c.type === 'bond' && c.atom1 && c.atom2) {
+      return { bond: { atom1: c.atom1.split(',').map(s => s.trim()).filter(Boolean), atom2: c.atom2.split(',').map(s => s.trim()).filter(Boolean) } };
+    }
+    if (c.type === 'pocket' && c.binder && c.contacts) {
+      return { pocket: { binder: c.binder, contacts: c.contacts.split(';').map(s => s.split(',').map(x => x.trim()).filter(Boolean)), max_distance: c.max_distance } };
+    }
+    if (c.type === 'contact' && c.token1 && c.token2) {
+      return { contact: { token1: c.token1.split(',').map(s => s.trim()).filter(Boolean), token2: c.token2.split(',').map(s => s.trim()).filter(Boolean), max_distance: c.max_distance } };
+    }
+    return null;
+  })
+  .filter(Boolean);
+
+const yamlProperties = properties
+  .map(p => {
+    if (p.type === 'affinity' && p.binder) {
+      return { affinity: { binder: p.binder } };
+    }
+    return null;
+  })
+  .filter(Boolean);
 
     const yamlObj = {
       version: 1,
       sequences: yamlSequences,
-      constraints: constraints.filter(c => c),
-      templates: templates.filter(t => t),
-      properties: properties.filter(p => p)
+      constraints: yamlConstraints,
+      templates: yamlTemplates,
+      properties: yamlProperties
     };
 
     const yamlStr = toYAML(yamlObj);
-    const blob = new Blob([yamlStr], { type: 'text/yaml' });
+    const yamlStrWithNewline = yamlStr.endsWith('\n') ? yamlStr : `${yamlStr}\n`;
+    const blob = new Blob([yamlStrWithNewline], { type: 'text/yaml' });
     yamlFile = new File([blob], 'input.yaml', { type: 'text/yaml' });
   }
 
-    const formData = new FormData();
-    formData.append('file', yamlFile);
-    formData.append('email', email);
-    formData.append('userId', userId);
-    formData.append('jobTitle', jobTitle);
+  const formData = new FormData();
+  formData.append('file', yamlFile);
+  formData.append('email', email);
+  formData.append('userId', userId);
+  formData.append('jobTitle', jobTitle);
 
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/boltz/run`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Job submission failed');
-      setResult(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --- Attach template files ---
+  templates.forEach((t, i) => {
+    if (t.file) formData.append(`templateFile${i}`, t.file);
+  });
 
+  try {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/boltz/run`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Job submission failed');
+    setResult(data);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   const handleSeqChange = (idx, field, value) => {
     const updated = [...sequences];
     updated[idx][field] = value;
@@ -204,8 +239,14 @@ const [glycanImageErrors, setGlycanImageErrors] = useState({});
     updated[idx] = value;
     setConstraints(updated);
   };
-  const addConstraint = () => setConstraints([...constraints, '']);
-  const removeConstraint = idx => setConstraints(constraints.filter((_, i) => i !== idx));
+
+  const handleConstraintField = (idx, field, value) => {
+  const updated = [...constraints];
+  updated[idx][field] = value;
+  setConstraints(updated);
+};
+const addConstraint = () => setConstraints([...constraints, { ...emptyConstraint }]);
+const removeConstraint = idx => setConstraints(constraints.filter((_, i) => i !== idx));
 
   const handleTemplateChange = (idx, value) => {
     const updated = [...templates];
@@ -390,50 +431,188 @@ const [glycanImageErrors, setGlycanImageErrors] = useState({});
         <Button size="sm" onClick={addSequence} style={{ marginBottom: 12 }}>Add Sequence</Button>
         <hr />
         <h4>Constraints</h4>
-        {constraints.map((c, idx) => (
-          <div key={idx} className="ligandmpnn-form-group">
-            <input
-              className="ligandmpnn-input"
-              placeholder="Constraint YAML (e.g. bond: ...)"
-              value={c}
-              onChange={e => handleConstraintChange(idx, e.target.value)}
-              style={{ width: '80%' }}
-            />
-            <Button size="sm" variant="danger" onClick={() => removeConstraint(idx)} style={{ marginLeft: 8 }}>Remove</Button>
-          </div>
-        ))}
-        <Button size="sm" onClick={addConstraint} style={{ marginBottom: 12 }}>Add Constraint</Button>
-        <hr />
-        <h4>Templates</h4>
-        {templates.map((t, idx) => (
-          <div key={idx} className="ligandmpnn-form-group">
-            <input
-              className="ligandmpnn-input"
-              placeholder="Template YAML (e.g. cif: ...)"
-              value={t}
-              onChange={e => handleTemplateChange(idx, e.target.value)}
-              style={{ width: '80%' }}
-            />
-            <Button size="sm" variant="danger" onClick={() => removeTemplate(idx)} style={{ marginLeft: 8 }}>Remove</Button>
-          </div>
-        ))}
-        <Button size="sm" onClick={addTemplate} style={{ marginBottom: 12 }}>Add Template</Button>
-        <hr />
+{constraints.map((c, idx) => (
+  <div key={idx} className="ligandmpnn-form-group" style={{ border: '1px solid #eee', padding: 8, marginBottom: 8 }}>
+       <select
+      className="ligandmpnn-input"
+      style={{ minWidth: 180, flex: 1, marginBottom: 8 }}
+      value={c.type}
+      onChange={e => handleConstraintField(idx, 'type', e.target.value)}
+    >
+      <option value="bond">Bond</option>
+      <option value="pocket">Pocket</option>
+      <option value="contact">Contact</option>
+    </select>
+    {c.type === 'bond' && (
+      <>
+        <input
+          className="ligandmpnn-input"
+          placeholder="atom1 (e.g. A,1,CA)"
+          value={c.atom1}
+          onChange={e => handleConstraintField(idx, 'atom1', e.target.value)}
+        />
+        <input
+          className="ligandmpnn-input"
+          placeholder="atom2 (e.g. B,2,CB)"
+          value={c.atom2}
+          onChange={e => handleConstraintField(idx, 'atom2', e.target.value)}
+        />
+      </>
+    )}
+    {c.type === 'pocket' && (
+      <>
+        <input
+          className="ligandmpnn-input"
+          placeholder="binder (CHAIN_ID)"
+          value={c.binder}
+          onChange={e => handleConstraintField(idx, 'binder', e.target.value)}
+        />
+        <input
+          className="ligandmpnn-input"
+          placeholder="contacts (e.g. A,1,CA;B,2,CB)"
+          value={c.contacts}
+          onChange={e => handleConstraintField(idx, 'contacts', e.target.value)}
+        />
+        <input
+          className="ligandmpnn-input"
+          placeholder="max_distance (Å)"
+          value={c.max_distance}
+          onChange={e => handleConstraintField(idx, 'max_distance', e.target.value)}
+        />
+      </>
+    )}
+    {c.type === 'contact' && (
+      <>
+        <input
+          className="ligandmpnn-input"
+          placeholder="token1 (e.g. A,1,CA)"
+          value={c.token1}
+          onChange={e => handleConstraintField(idx, 'token1', e.target.value)}
+        />
+        <input
+          className="ligandmpnn-input"
+          placeholder="token2 (e.g. B,2,CB)"
+          value={c.token2}
+          onChange={e => handleConstraintField(idx, 'token2', e.target.value)}
+        />
+        <input
+          className="ligandmpnn-input"
+          placeholder="max_distance (Å)"
+          value={c.max_distance}
+          onChange={e => handleConstraintField(idx, 'max_distance', e.target.value)}
+        />
+      </>
+    )}
+    <Button
+        size="sm"
+        variant="danger"
+        style={{ marginLeft: 8, height: 28, padding: '0 10px', fontSize: 12 }}
+        onClick={() => removeConstraint(idx)}
+    >       
+        Remove
+    </Button>
+  </div>
+))}
+<Button size="sm" onClick={addConstraint} style={{ marginBottom: 12 }}>Add Constraint</Button>
+    <h4>Templates</h4>
+{templates.map((t, idx) => (
+  <div key={idx} className="ligandmpnn-form-group" style={{ border: '1px solid #eee', padding: 8, marginBottom: 8 }}>
+    <label>
+      CIF File:
+      <input
+        type="file"
+        accept=".cif"
+        onChange={e => {
+          const file = e.target.files[0];
+          const updated = [...templates];
+          updated[idx] = { ...updated[idx], file, cif: file ? file.name : (t.cif || '') };
+          setTemplates(updated);
+        }}
+        style={{ marginBottom: 8 }}
+      />
+    </label>
+    <input
+      className="ligandmpnn-input"
+      placeholder="CIF path (if not uploading file)"
+      value={t.cif || ''}
+      onChange={e => {
+        const updated = [...templates];
+        updated[idx] = { ...updated[idx], cif: e.target.value };
+        setTemplates(updated);
+      }}
+      style={{ marginBottom: 8 }}
+    />
+    <input
+      className="ligandmpnn-input"
+      placeholder="chain_id (optional, comma separated for multiple)"
+      value={t.chain_id || ''}
+      onChange={e => {
+        const updated = [...templates];
+        updated[idx] = { ...updated[idx], chain_id: e.target.value };
+        setTemplates(updated);
+      }}
+      style={{ marginBottom: 8 }}
+    />
+    <input
+      className="ligandmpnn-input"
+      placeholder="template_id (optional, comma separated for multiple)"
+      value={t.template_id || ''}
+      onChange={e => {
+        const updated = [...templates];
+        updated[idx] = { ...updated[idx], template_id: e.target.value };
+        setTemplates(updated);
+      }}
+      style={{ marginBottom: 8 }}
+    />
+<Button
+        size="sm"
+        variant="danger"
+        style={{ marginLeft: 8, height: 28, padding: '0 10px', fontSize: 12 }}
+        onClick={() => removeTemplate(idx)}
+    >       
+        Remove
+    </Button>  </div>
+))}
+<Button size="sm" onClick={() => setTemplates([...templates, { cif: '', chain_id: '', template_id: '', file: null }])} style={{ marginBottom: 12 }}>Add Template</Button>
         <h4>Properties</h4>
-        {properties.map((p, idx) => (
-          <div key={idx} className="ligandmpnn-form-group">
-            <input
-              className="ligandmpnn-input"
-              placeholder="Property YAML (e.g. affinity: ...)"
-              value={p}
-              onChange={e => handlePropertyChange(idx, e.target.value)}
-              style={{ width: '80%' }}
-            />
-            <Button size="sm" variant="danger" onClick={() => removeProperty(idx)} style={{ marginLeft: 8 }}>Remove</Button>
-          </div>
-        ))}
-        <Button size="sm" onClick={addProperty} style={{ marginBottom: 12 }}>Add Property</Button>
-        <hr />
+{properties.map((p, idx) => (
+  <div key={idx} className="ligandmpnn-form-group" style={{ border: '1px solid #eee', padding: 8, marginBottom: 8 }}>
+        <select
+          className="ligandmpnn-input"
+          style={{ minWidth: 180, flex: 1, marginBottom: 8 }}
+          value={p.type || 'affinity'}
+          onChange={e => {
+            const updated = [...properties];
+            updated[idx].type = e.target.value;
+            setProperties(updated);
+          }}
+        >
+          <option value="affinity">Affinity</option>
+          {/*more options here, later */}
+        </select>
+    {p.type === 'affinity' && (
+      <input
+        className="ligandmpnn-input"
+        placeholder="binder (CHAIN_ID)"
+        value={p.binder || ''}
+        onChange={e => {
+          const updated = [...properties];
+          updated[idx].binder = e.target.value;
+          setProperties(updated);
+        }}
+      />
+    )}
+        <Button
+      size="sm"
+      variant="danger"
+      style={{ marginLeft: 8, height: 28, padding: '0 10px', fontSize: 12 }}
+      onClick={() => removeProperty(idx)}
+    >
+      Remove
+    </Button>
+  </div>
+))}
+<Button size="sm" onClick={() => setProperties([...properties, { type: 'affinity', binder: '' }])} style={{ marginBottom: 12 }}>Add Property</Button>
         <Button variant="primary" type="submit" disabled={loading} className="ligandmpnn-submit-btn">
           {loading ? <Spinner animation="border" size="sm" /> : 'Submit Job'}
         </Button>

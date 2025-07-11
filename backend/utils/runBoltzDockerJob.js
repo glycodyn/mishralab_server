@@ -8,7 +8,7 @@ const moongoose = require('mongoose');
 
 const {BoltzJob} = require('../config/mongoConfig');
 
-const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/boltz_Inputs';
+const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/boltz_inputs';
 const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/boltz_outputs';
 
 
@@ -39,7 +39,7 @@ try{
         '-e', 'XLA_CLIENT_MEM_FRACTION=0.85',
         '--shm-size=8g',
         '-e', 'NUMBA_DISABLE_CACHE=1',
-        '-v', '/home/mishra_lab/extra_disk/boltz_inputs:/inputs',
+        '-v', `/home/mishra_lab/extra_disk/boltz_inputs/${jobId}:/inputs`,
         `-v`, `/home/mishra_lab/extra_disk/boltz_outputs/${jobId}:/outputs`,
         'coreyhowe/boltz2',
         'boltz', 'predict', `/inputs/${filename}`,

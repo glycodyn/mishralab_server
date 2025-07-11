@@ -24,25 +24,32 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-router.post('/run', upload.single('file'), async (req, res) => {
-  const inputFile = req.file;
+router.post('/run', upload.any(), async (req, res) => {
+  const inputFile = req.files.find(f=>f.fieldname==='file')
   if (!inputFile) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-
   const jobId = uuidv4();
-  // Accept .yaml, .yml, .fa, .fasta (default to .yaml if unknown)
+  const inputSubDir = path.join(UPLOAD_FOLDER, jobId);
+  fs.mkdirSync(inputSubDir, { recursive: true });
+ 
   let ext = path.extname(inputFile.originalname).toLowerCase();
   if (!['.yaml', '.yml', '.fa', '.fasta'].includes(ext)) ext = '.yaml';
   const inputFilename = `${jobId}${ext}`;
-  console.log('Input file will be saved as:', inputFilename);
-  const inputPath = path.join(UPLOAD_FOLDER, inputFilename);
+  const inputPath = path.join(inputSubDir, inputFilename);
+ 
+  
 
   try {
     fs.renameSync(inputFile.path, inputPath);
   } catch (err) {
     return res.status(500).json({ error: 'File processing error' });
   }
+
+  req.files.filter(f=>f.fieldname.startsWith('templateFile')).forEach(f=>{
+    const destination = path.join(inputSubDir, f.originalname);
+    fs.renameSync(f.path, destination);
+  });
 
   // Save job to DB
   const boltzJob = new BoltzJob({

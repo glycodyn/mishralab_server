@@ -1,0 +1,14 @@
+receptor = 1752259605750-pocket.pdbqt
+ligand = 1752259608451-ligand-b (2).pdbqt
+
+center_x = 146.45
+center_y = 145.45
+center_z = 183.55
+
+size_x = 50
+size_y = 50
+size_z = 50
+
+exhaustiveness = 8
+num_modes = 9
+energy_range = 3

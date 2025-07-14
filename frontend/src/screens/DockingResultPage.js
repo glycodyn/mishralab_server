@@ -202,7 +202,18 @@ const DockingResultPage = () => {
   {loading ? (
     <div className="loader-container">
       <div className="spinner"></div>
-      <p>{isGlycoTorch || isVinaCarb ? "Running GlycoTorch / Vina-Carb..." : "Running AutoDock Vina..."}</p>
+      <p>
+      {
+        isGlycoTorch
+          ? "Running GlycoTorch"
+          : isVinaCarb
+          ? "Running Vina Carb"
+          : isPureVina
+          ? "Running AutoDock Vina"
+          : "Idle"
+      }
+    </p>
+
     </div>
   ) : (
     <div className="result-output">

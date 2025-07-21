@@ -115,6 +115,16 @@ const DockingResultPage = () => {
     //ligandComponents[index]?.autoView(true);
   };
   
+  function cleanPDBQTText(text) {
+    const lines = text.split('\n');
+    const cleaned = lines.filter(line =>
+      line.startsWith('MODEL') ||
+      line.startsWith('ATOM') ||
+      line.startsWith('HETATM') ||
+      line.startsWith('ENDMDL')
+    );
+    return cleaned.join('\n');
+  }
   useEffect(() => {
     if (state?.outputPath && state?.receptorPath && stageRef.current) {
       const fetchAndLoad = async () => {
@@ -135,8 +145,10 @@ const DockingResultPage = () => {
           console.log('Fetching docked result (ligand):', outputUrl);
           const outputRes = await fetch(outputUrl);
           const outputText = await outputRes.text();
+          const cleanedText = cleanPDBQTText(outputText); // ← your frontend cleaner
+          console.log('Cleaned output text:', cleanedText);
   
-          const models = outputText
+          const models = cleanedText
             .split(/MODEL\s+\d+/)
             .slice(1)
             .map((chunk, i) => `MODEL ${i + 1}\n${chunk.trim().split("ENDMDL")[0]}\nENDMDL`);
@@ -170,7 +182,6 @@ const DockingResultPage = () => {
       setCurrentIndex(0);
     }
   }, [ligandComponents]);
-  
   
   useEffect(() => {
     const handleUnload = async () => {

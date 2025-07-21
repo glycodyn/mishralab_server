@@ -1,0 +1,11 @@
+FROM ubuntu:20.04
+
+RUN apt-get update && \
+    apt-get install -y libglib2.0-0 libsm6 libxext6 libxrender-dev && \
+    apt-get clean
+
+COPY GlycoTorchVina /usr/local/bin/GlycoTorchVina
+RUN chmod +x /usr/local/bin/GlycoTorchVina
+
+WORKDIR /data
+ENTRYPOINT ["GlycoTorchVina"]

@@ -13,6 +13,7 @@ import RequireAuth from './components/requireAuth';
 import LoginSignup from './utils/authentication';
 import Boltz from './screens/Boltz2';
 import BoltzViewer from './screens/Boltz_viewer';
+import Tutorials from './screens/tutorials';
 
 function App() {
   
@@ -24,10 +25,7 @@ function App() {
             <Header>
               <nav className={{ display: 'flex', color:'red', fontSize:'20px', gap: '1rem' }}>
                 <Link to="/" className='nav-link'>Home</Link>
-                <Link to="/vis" className='nav-link'>AlphaFold3</Link>
-                <Link to="/ligandMPNN" className='nav-link'>Ligand MPNN</Link>
-                <Link to="/docking" className='nav-link'>Docking Viewer</Link>
-                <Link to="/boltz" className='nav-link'>Complex prediction</Link>
+                <Link to="/tutorials" className='nav-link'>Tutorials</Link>
                 
               </nav>
             </Header>
@@ -83,6 +81,12 @@ function App() {
                     <BoltzViewer />
                   </RequireAuth>
                 }
+              />
+              <Route
+              path='/tutorials'
+              element={
+                <Tutorials />
+              }
               />
               <Route path='/login' element={<LoginSignup />} />
             </Routes>

@@ -25,6 +25,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.post('/run', upload.single('file'), async (req, res) => {
+    console.log('req.body:', req.body);
+    console.log('req.headers:', req.headers);
+    console.log('token:', req.cookies.token);
     const pdbFile = req.file;
     if (!pdbFile) {
         return res.status(400).json({ error: 'No file uploaded' });

@@ -38,6 +38,7 @@ export function AuthProvider({ children }) {
             if (!res.ok) throw new Error(data.error || 'Signup failed');
             setUser(data.user);
             setToken(data.token);
+            document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=strict`; 
         } catch (err) {
             setError(err.message);
         } finally {
@@ -59,6 +60,7 @@ export function AuthProvider({ children }) {
             if (!res.ok) throw new Error(data.error || 'Login failed');
             setUser(data.user);
             setToken(data.token);
+            document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=strict`; 
         } catch (err) {
             setError(err.message);
         } finally {
@@ -66,27 +68,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Google login/signup
-    const googleAuth = async (idToken) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL}/user/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Google authentication failed');
-            setUser(data.user);
-            setToken(data.token);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    
     // Logout
     const logout = () => {
         setUser(null);
@@ -94,6 +76,7 @@ export function AuthProvider({ children }) {
         setError(null);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        document.cookie = 'token=;Max-Age=0; path=/;';
     };
 
     return (
@@ -104,7 +87,6 @@ export function AuthProvider({ children }) {
             error,
             signup,
             login,
-            googleAuth,
             logout,
             setError,
         }}>

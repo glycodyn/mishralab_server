@@ -119,7 +119,8 @@ const LigandMPNNScreen = () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/ligandmpnn/run`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Job submission failed');

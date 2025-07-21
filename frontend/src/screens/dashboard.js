@@ -6,52 +6,53 @@ function Dashboard() {
   const services = [
     {
       title: "Protein Structure Prediction",
-      description: "Generate accurate 3D protein structure predictions using Google's AlphaFold3 technology. Upload FASTA sequences or files to predict protein structures with confidence scores.",
+      description: "Predict high-accuracy 3D protein structures using AlphaFold3. Upload FASTA sequences or files and obtain 3D models with confidence metrics. Every user is required to obtain model parameters from DeepMind.",
       icon: "🧬",
       link: "/vis",
       features: [
-        "State-of-the-art protein structure prediction",
-        "Confidence scores (pLDDT) for assessment of prediction quality",
-        "Interactive 3D visualization of results",
-        "Email notifications when predictions complete"
+        "Supports AlphaFold3",
+        "Per-residue confidence scores (pLDDT)",
+        "Interactive 3D visualization",
+        "Email alerts on job completion"
       ]
     },
     {
       title: "Multi-Entity Protein-Ligand Design",
-      description: "Design and optimize protein, DNA, RNA, and ligand complexes using the Boltz2 deep learning platform. Boltz2 supports multi-entity inputs, advanced constraints, and property-driven design for next-generation biomolecular engineering.",
+      description: "Design and optimize protein, DNA, RNA, and ligand complexes Design proteins and dock ligands using the Boltz2 deep learning platform. Supports multi-entity complexes with flexible constraints and property-guided optimization. the Boltz2 deep learning platform. Boltz2 supports multi-entity inputs, advanced constraints, and property-driven design for next-generation biomolecular engineering.",
       icon: "🔗",
       link: "/boltz",
       features:[
-        "Multi-chain and multi-ligand support",
-         "Sequence, structure, and property-based design",
-         "YAML and FASTA input options",
-         "Downloadable results and job tracking"
+        "Supports predicting protein complexes with ligands, nucleic acids, and glycans",
+         "Deeplearning–based docking and sequence design",
+         "Supports YAML and FASTA input formats",
+         "Downloadable results with job tracking"
 
       ],
     },
     {
       title: "Protein Design",
-      description: "Design protein sequences with atomic context using LigandMPNN. Upload PDB files and select model options for advanced protein-ligand design.",
+      description: "Design proteins that bind to a specific ligand. Upload PDB files and customize model settings for context-specific sequence generation.",
       icon: "🧪",
       link: "/ligandMPNN",
       features: [
-        "Ligand-aware protein sequence design",
-        "Multiple model and checkpoint options",
-        "Batch and temperature controls",
-        "Downloadable results and statistics"
+        "Ligand-aware sequence design using LigandMPNN",
+        "Supports multi-chain inputs",
+        "Adjustable temperature and number of designs",
+        "Selectable model checkpoints",
+        "Downloadable sequences and scores"
       ],
       
     },
     {
-      title: "Protein-glycan Docking",
-      description: "Molecular docking simulation for drug discovery applications. Predict how small molecules bind to target proteins.",
+      title: "GlyDockStudio",
+      description: "Predict how glycans bind to protein targets using specialized docking tools for glycoscience research and drug development.",
       icon: "🔮",
       link: "#",
       features: [
-        "Predict protein-ligand interactions",
-        "Calculate binding affinities",
-        "Visualize docking poses",
-        "Support for flexible docking"
+        "Accurate glycan docking to protein binding sites",
+        "Estimation of binding affinities",
+        "Visualization of predicted glycan-protein complexes",
+        "Support for flexible glycan and protein conformations"
       ],
       comingSoon: true
     }
@@ -62,8 +63,10 @@ function Dashboard() {
       <div className="dashboard-header">
         <h1>Biomolecular Simulation and Machine Learning Group Workbench</h1>
         <p>
-          Welcome to the Biomolecular Simulation and Machine Learning Group Workbench.
-          Our tools help researchers analyze proteins, predict structures, and accelerate drug discovery.
+        &quot;Welcome to the Biomolecular Simulation and Machine Learning Group Workbench — a
+            web platform for protein structure prediction, glycan docking, and molecular design. Our
+            integrated pipelines support drug discovery and protein engineering through cutting-
+            edge tools like AlphaFold3, LigandMPNN, and Boltz-2.&quot;
         </p>
       </div>
 
@@ -100,13 +103,17 @@ function Dashboard() {
       <div className="dashboard-footer">
         <h2>About Our Platform</h2>
         <p>
-          The Biomolecular Simulation and Machine Learning Group Workbench integrates cutting-edge
-          AI and molecular visualization technologies to accelerate research in structural biology
-          and drug discovery. Our tools are designed to be accessible to researchers at all technical levels.
+            The Biomolecular Simulation and Machine Learning Group Workbench is a glyco-
+            oriented platform that integrates advanced AI-driven analysis and interactive molecular
+            visualization to accelerate research in glycoscience, structural biology, and drug design.
+            Our user-friendly tools support researchers at all expertise levels, enabling discoveries
+            in glycan-related biomolecular interactions and diagnostics.
         </p>
         <p>
           For questions or support, please contact <a href="mailto:sushil@olemiss.edu">sushil@olemiss.edu</a>
         </p>
+        <p> © 2025 MolSim Group, Department of Biomedical Engineering, University of
+Mississippi. All rights reserved.</p>
       </div>
     </div>
   );

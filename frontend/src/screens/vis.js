@@ -123,6 +123,7 @@ useEffect(() => {
     formData.append('userId', userId);
     formData.append('jobTitle', jobTitle);
     fetch(`${process.env.REACT_APP_API_URL}/predict`, {
+
       method: 'POST',
       body: formData
     })

@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const {AlphaFold3Job} = require('./config/mongoConfig.js'); 
 const multer = require('multer');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -15,20 +16,22 @@ const redisClient = require('./utils/redisClient.js')
 const  sendNotification = require('./utils/emailer.js')
 const ligandMPNNRouter = require('./routes/ligandMPNN.js')
 const {router: authenticationRouter} = require('./routes/authentication.js');
+const {router: verifyJWT}= require('./routes/authentication.js')
 const boltzROuter = require('./routes/boltz.js');
 const glycanRouter = require('./routes/fetchGlycans.js')
 const runLigandMPNNDocker = require('./utils/runLigandMPNNDocker.js');
 const { json } = require('stream/consumers');
 const app = express();
 app.use(express.json());
+app.use(cookieParser())
 app.use(cors({
-  origin: '*', 
+  origin: 'http://172.25.11.91:3000', 
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-mongoose.connect('mongodb://localhost:27017/alphafold', {
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => {
@@ -64,7 +67,7 @@ app.use('/user', authenticationRouter);
 app.use('/boltz', boltzROuter)
 app.use('/glycan', glycanRouter);
 
-app.post('/predict', upload.single('file'), async (req, res) => {
+app.post('/predict', verifyJWT, upload.single('file'), async (req, res) => {
   try{
   const email = req.body.email;
   const jobTitle = req.body.jobTitle
@@ -74,9 +77,6 @@ app.post('/predict', upload.single('file'), async (req, res) => {
   if (!inputFile) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-
-
-  
   const jobId = uuidv4();
    const ext = path.extname(inputFile.originalname) || '.fasta';
   const fastaFilename = `${jobId}${ext}`;
@@ -89,22 +89,10 @@ app.post('/predict', upload.single('file'), async (req, res) => {
       return res.status(500).json({ error: 'File processing error' });
     }
 
-
   let jsonFilename = `${jobId}.json`;
   const jsonPath = path.join(UPLOAD_FOLDER, jsonFilename);
 
-  try{
-    jsonData = fs.readFileSync(jsonPath, 'utf8');
-    let jsonObject = JSON.parse(jsonData);
-
-    if(jsonObject.name!==jobId){
-      jsonObject.name = jobId;
-      fs.writeFileSync(jsonPath, JSON.stringify(jsonObject, null, 2));
-    }
-  }catch (err) {
-    console.error('Error reading or parsing JSON file:', err);
-    return res.status(500).json({ error: 'Error processing JSON file' });
-  }
+ 
  
   try {
       if (inputFile.mimetype !== 'application/json') {
@@ -118,6 +106,19 @@ app.post('/predict', upload.single('file'), async (req, res) => {
       console.error('Error converting to JSON:', err);
       return res.status(400).json({ error: 'Invalid file format or content' });
     }
+
+   try{
+    jsonData = fs.readFileSync(jsonPath, 'utf8');
+    let jsonObject = JSON.parse(jsonData);
+
+    if(jsonObject.name!==jobId){
+      jsonObject.name = jobId;
+      fs.writeFileSync(jsonPath, JSON.stringify(jsonObject, null, 2));
+    }
+  }catch (err) {
+    console.error('Error reading or parsing JSON file:', err);
+    return res.status(500).json({ error: 'Error processing JSON file' });
+  }
 
   
 

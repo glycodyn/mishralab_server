@@ -26,21 +26,29 @@
 }
 
 .services-grid {
-  display: grid;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 2rem;
+  flex-wrap: nowrap;
   margin-bottom: 3rem;
 }
 
 .service-card {
+  flex: 1 1 0;
+  min-width: 300px;
+  max-width: 400px;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   padding: 1.5rem;
   transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%;
+  
   display: flex;
   flex-direction: column;
+  margin: 0;
 }
 
 .service-card:hover {

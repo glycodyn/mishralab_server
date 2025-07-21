@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const dotenv = require('dotenv');
 const readline = require('readline');
 const { User } = require('../config/mongoConfig.js');
+dotenv.config();
+
+const uri = process.env.MONGO_URI;
+console.log(uri)
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -13,8 +18,9 @@ async function prompt(question) {
 }
 
 async function main() {
+  console.log("MONGO_URI:", process.env.MONGO_URI); 
   // Connect to MongoDB
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/alphafold', {
+  await mongoose.connect('mongodb+srv://mishra_lab:Mishra_lab20251@cluster0.fgfn8nr.mongodb.net/myDatabase?retryWrites=true&w=majority', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });

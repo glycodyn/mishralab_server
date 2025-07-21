@@ -1,12 +1,49 @@
 const mongoose = require('mongoose');
 
-const JobSchema = new mongoose.Schema({
+const AlphaFold3JobSchema = new mongoose.Schema({
   jobId: { type: String, required: true, unique: true },
   email: { type: String, required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   jobTitle: String,
   filename: String,
   status: String,
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Job', JobSchema);
+const LigandMPNNJobSchema = new mongoose.Schema({
+  jobId: { type: String, required: true, unique: true },
+  email: { type: String, required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  jobTitle: String,
+  pdbFilename: String,
+  status: String,
+  createdAt: { type: Date, default: Date.now },
+});
+
+const BoltzJobSchema = new mongoose.Schema({
+  jobId: { type: String, required: true, unique: true },
+  email: { type: String, required: true, index: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  jobTitle: String,
+  pdbFilename: String,
+  status: String,
+  createdAt: { type: Date, default: Date.now },
+});
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email:{type: String, required: true, unique:true},
+  newPassword:{type: Boolean, default: false}, 
+  createdAt: { type: Date, default: Date.now },
+  lastLogin: { type: Date, default: Date.now },
+  
+});
+
+
+module.exports = {
+  AlphaFold3Job: mongoose.model('AlphaFold3Job', AlphaFold3JobSchema),
+  LigandMPNNJob: mongoose.model('LigandMPNNJob', LigandMPNNJobSchema),
+  BoltzJob: mongoose.model('BoltzJob', BoltzJobSchema),
+  User: mongoose.model('User', UserSchema)
+};

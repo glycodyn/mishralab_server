@@ -1,0 +1,122 @@
+/* Container background and spacing */
+.ligandmpnn-container {
+  background: var(--bs-body-bg, #f8f9fa);
+  border-radius: 12px;
+  padding-bottom: 2rem;
+}
+
+/* Card shadow and border for consistency */
+.ligandmpnn-container .card {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  border-radius: 12px;
+  border: 1px solid #e3e3e3;
+}
+
+/* Card title styling */
+.ligandmpnn-container .card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--bs-primary, #0d6efd);
+}
+
+/* Form label styling */
+.ligandmpnn-container .form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Form control focus */
+.ligandmpnn-container .form-control:focus {
+  border-color: var(--bs-primary, #0d6efd);
+  box-shadow: 0 0 0 0.2rem rgba(13,110,253,.15);
+}
+
+/* Button styling */
+.ligandmpnn-container .btn-primary {
+  background: var(--bs-primary, #0d6efd);
+  border-color: var(--bs-primary, #0d6efd);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Alert styling */
+.ligandmpnn-container .alert-success {
+  border-left: 5px solid var(--bs-success, #198754);
+}
+.ligandmpnn-container .alert-danger {
+  border-left: 5px solid var(--bs-danger, #dc3545);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .ligandmpnn-container .card {
+    border-radius: 8px;
+  }
+  .ligandmpnn-container {
+    padding-bottom: 1rem;
+  }
+}
+
+.ligandmpnn-main-container {
+  min-height: 100vh;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ligandmpnn-centered-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.08);
+  padding: 2.5rem 2rem 2rem 2rem;
+  max-width: 500px;
+  width: 100%;
+}
+
+.ligandmpnn-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #222;
+  text-align: left;
+}
+
+.ligandmpnn-form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.ligandmpnn-label {
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+  color: #333;
+}
+
+.ligandmpnn-input {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+.ligandmpnn-checkbox-group {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.ligandmpnn-checkbox-group label {
+  font-weight: 400;
+  font-size: 1rem;
+  color: #444;
+}
+
+.ligandmpnn-submit-btn {
+  width: 100%;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-top: 0.5rem;
+}

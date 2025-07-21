@@ -1,0 +1,88 @@
+.boltz2-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 2.5rem 2.5rem 2rem 2.5rem;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  font-family: 'Inter', Arial, sans-serif;
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.boltz2-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #222;
+  text-align: left;
+}
+
+.boltz2-form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.boltz2-label {
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+  color: #333;
+}
+
+.boltz2-input {
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.boltz2-checkbox-group {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.boltz2-checkbox-group label {
+  font-weight: 400;
+  font-size: 1rem;
+  color: #444;
+}
+
+.boltz2-submit-btn {
+  width: 100%;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-top: 0.5rem;
+}
+
+.boltz2-section {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background: #f8f9fa;
+}
+
+.boltz2-job-box {
+  background: #f7f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #eaeaea;
+  font-size: 1rem;
+}
+
+.boltz2-job-box strong {
+  font-size: 1.05em;
+}
+
+@media (max-width: 900px) {
+  .boltz2-container {
+    padding: 1.2rem 0.5rem;
+    min-height: unset;
+  }
+}

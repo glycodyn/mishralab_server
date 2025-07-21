@@ -5,7 +5,7 @@ const archiver = require('archiver');
 const redisClient = require('./redisClient');
 const sendNotification = require('./emailer');
 const moongoose = require('mongoose');
-const Job = require('../config/mongoConfig');
+const {AlphaFold3Job} = require('../config/mongoConfig');
 
 const UPLOAD_FOLDER = '/home/mishra_lab/extra_disk/af_uploads';
 const OUTPUT_FOLDER = '/home/mishra_lab/extra_disk/af_outputs';
@@ -23,27 +23,30 @@ try{
   const logStream = fs.createWriteStream(logPath);
   try{
   await redisClient.hSet(`job:${jobId}`, 'status', 'running');
-  await Job.updateOne({ jobId },{$set:  { status: 'running' }});
+  await AlphaFold3Job.updateOne({ jobId },{$set:  { status: 'running' }});
   } catch (dberr) {
     console.error(`Error updating job status for ${jobId}:`, dberr);
   }
+
+  const uid = process.getuid();
+  const gid = process.getgid();
   
   
-     const dockerCommandArgs = [
-      'run', '--rm', '--gpus', 'all',
-      '-e', 'XLA_CLIENT_MEM_FRACTION=0.95',
-      '-v', `${UPLOAD_FOLDER}:/home/mishra_lab/input`,
-      '-v', `${outputSubdir}:/home/mishra_lab/af_output`,
-      '-v', '/home/mishra_lab/Parameters:/home/mishra_lab/Parameters',
-      '-v', '/home/mishra_lab/public_databases:/home/mishra_lab/public_databases',
-      'alphafold3',
-      'python', 'run_alphafold.py',
-      `--json_path=/home/mishra_lab/input/${filename}`,
-      '--model_dir=/home/mishra_lab/Parameters',
-      '--db_dir=/home/mishra_lab/public_databases',
-      '--output_dir=/home/mishra_lab/af_output'
-    ];
-  
+      const dockerCommandArgs = [
+        'run', '--rm', '--gpus', 'all',
+        '-e', 'XLA_CLIENT_MEM_FRACTION=0.85',
+        '-v', `${UPLOAD_FOLDER}:/home/mishra_lab/input`,
+        '-v', `${outputSubdir}:/home/mishra_lab/af_output`,
+        '-v', '/home/mishra_lab/Parameters:/home/mishra_lab/Parameters',
+        '-v', '/home/mishra_lab/public_databases:/home/mishra_lab/public_databases',
+        'alphafold3',
+        'python', 'run_alphafold.py',
+        `--json_path=/home/mishra_lab/input/${filename}`,
+        '--model_dir=/home/mishra_lab/Parameters',
+        '--db_dir=/home/mishra_lab/public_databases',
+        '--output_dir=/home/mishra_lab/af_output'
+      ];
+    
     return new Promise(async (resolve) => {
       try{
       const proc = spawn('docker', dockerCommandArgs);
@@ -54,7 +57,7 @@ try{
         const status = `failed: ${errorMsg}`;
         try {
             await redisClient.hSet(`job:${jobId}`, { status });
-            await Job.updateOne({ jobId }, { 
+            await AlphaFold3Job.updateOne({ jobId }, { 
               $set: { 
                 status,
                 failedAt: new Date()
@@ -89,7 +92,7 @@ try{
     if (pattern.test(logContent)) {
       try {
                   await redisClient.hSet(`job:${jobId}`, 'status', status);
-                  await Job.updateOne({ jobId }, { $set: { status, failedAt: new Date() } });
+                  await AlphaFold3Job.updateOne({ jobId }, { $set: { status, failedAt: new Date() } });
                 } catch (dbErr) {
                   console.error(`Error updating status for job ${jobId}:`, dbErr);
                 }
@@ -111,7 +114,7 @@ try{
     const status = `failed: ${errorMsg}`;
     try{
     await redisClient.hSet(`job:${jobId}`, { status });
-    await Job.updateOne({ jobId }, { 
+    await AlphaFold3Job.updateOne({ jobId }, { 
       $set: { 
         status,
         failedAt: new Date()
@@ -136,7 +139,7 @@ try{
                 const status = `failed: Error creating results archive: ${err.message}`;
                 try {
                   await redisClient.hSet(`job:${jobId}`, { status });
-                  await Job.updateOne({ jobId }, { 
+                  await AlphaFold3Job.updateOne({ jobId }, { 
                     $set: { 
                       status,
                       failedAt: new Date()
@@ -159,7 +162,7 @@ try{
             completedAt: new Date().toISOString(),
             zipPath
           });
-          await Job.updateOne({ jobId }, { $set: { status: 'completed', completedAt: new Date() } });
+          await AlphaFold3Job.updateOne({ jobId }, { $set: { status: 'completed', completedAt: new Date() } });
           try{
           await sendNotification(email, jobId, jobTitle);
           }
@@ -177,7 +180,7 @@ try{
         const status = `failed: Error creating results archive: ${zipErr.message}`;
         try {
           await redisClient.hSet(`job:${jobId}`, { status });
-          await Job.updateOne({ jobId }, { 
+          await AlphaFold3Job.updateOne({ jobId }, { 
             $set: { 
               status,
               failedAt: new Date()
@@ -193,7 +196,7 @@ try{
             const status = `failed: Unexpected error: ${err.message}`;
             try {
               await redisClient.hSet(`job:${jobId}`, { status });
-              await Job.updateOne({ jobId }, { 
+              await AlphaFold3Job.updateOne({ jobId }, { 
                 $set: { 
                   status,
                   failedAt: new Date()
@@ -210,7 +213,7 @@ try{
         const status = `failed: System error: ${err.message}`;
         try {
           await redisClient.hSet(`job:${jobId}`, { status });
-          await Job.updateOne({ jobId }, { 
+          await AlphaFold3Job.updateOne({ jobId }, { 
             $set: { 
               status,
               failedAt: new Date()
@@ -227,7 +230,7 @@ try{
     const status = `failed: Setup error: ${err.message}`;
     try {
       await redisClient.hSet(`job:${jobId}`, { status });
-      await Job.updateOne({ jobId }, { 
+      await AlphaFold3Job.updateOne({ jobId }, { 
         $set: { 
           status,
           failedAt: new Date()

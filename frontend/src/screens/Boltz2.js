@@ -20,9 +20,9 @@ const Boltz2 = () => {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [glycans, setGlycans] = useState([]);
-    const [manualAc, setManualAc] = useState('');
-  const [manualSmiles, setManualSmiles] = useState('');
-  const [manualError, setManualError] = useState('');
+    const [manualAc, setManualAc] = useState({});
+  const [manualSmiles, setManualSmiles] = useState({});
+  const [manualError, setManualError] = useState({});
   const [glycanImages, setGlycanImages] = useState({});
 const [glycanImageErrors, setGlycanImageErrors] = useState({});
 
@@ -58,22 +58,21 @@ const [constraints, setConstraints] = useState([]);
   }, []);
 
     const fetchSmilesByAc = async (ac, idx) => {
-    setManualError('');
-    setManualSmiles('');
+  setManualError(prev => ({ ...prev, [idx]: '' }));
+  setManualSmiles(prev => ({ ...prev, [idx]: '' }))
     if (!ac) return;
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/glycan/smiles/${ac}`);
       if (!res.ok) {
         const err = await res.json();
-        setManualError(err.error || 'Not found');
+        setManualError(prev => ({ ...prev, [idx]: err.error || 'Not found' }))
         return;
       }
       const data = await res.json();
-      setManualSmiles(data.smiles);
-      // Optionally auto-fill the sequence's SMILES field
+      setManualSmiles(prev => ({ ...prev, [idx]: data.smiles }));
       handleSeqChange(idx, 'smiles', data.smiles);
     } catch (e) {
-      setManualError('Error fetching SMILES');
+      setManualError(prev => ({ ...prev, [idx]: 'Error fetching SMILES' }));
     }
   };
 
@@ -105,6 +104,7 @@ function toYAML(obj, indent = 0) {
 
   const fetchGlycanImage = async (ac, idx) => {
   if (!ac) return;
+  console.log("fetching imafe for: ", ac)
   setGlycanImageErrors(prev => ({ ...prev, [idx]: '' }));
   setGlycanImages(prev => ({ ...prev, [idx]: '' }));
   try {
@@ -132,18 +132,29 @@ const handleSubmit = async (e) => {
   if (inputFile) {
     yamlFile = inputFile;
   } else {
-   const yamlSequences = sequences
-  .filter(seq => seq.entityType && seq.id && seq.sequence) // skip if any required field is empty
+   
+  const yamlSequences = sequences
+  .filter(seq => seq.entityType && seq.id) // Only require entityType and id
   .map(seq => {
     const { entityType, ...rest } = seq;
     const clean = Object.fromEntries(
-      Object.entries(rest).filter(([k, v]) =>
-        v !== '' && v !== undefined && !(typeof v === 'boolean' && v === false)
+      Object.entries(rest).filter(([k, v]) => 
+        v !== '' && 
+        v !== undefined && 
+        v !== null &&
+        !(Array.isArray(v) && v.length === 0) &&
+        !(typeof v === 'boolean' && v === false && k !== 'cyclic') // Keep cyclic if explicitly false
       )
     );
+    
+    // Special handling for ligands - ensure we keep either smiles or ccd
+    if (entityType === 'ligand' && !clean.smiles && !clean.ccd) {
+      return null; // Skip invalid ligands
+    }
+    
     return { [entityType]: clean };
-  });
-
+  })
+  .filter(Boolean);
 const yamlTemplates = templates
   .map(t => {
     let entry = {};
@@ -388,14 +399,17 @@ const removeConstraint = idx => setConstraints(constraints.filter((_, i) => i !=
                     className="ligandmpnn-input"
                     style={{ minWidth: 120 }}
                     placeholder="Enter GlyTouCan AC"
-                    value={manualAc}
-                    onChange={e => setManualAc(e.target.value)}
+                    value={manualAc[idx] || ''}
+                    onChange={e => setManualAc(prev => ({ ...prev, [idx]: e.target.value }))}
                   />
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => {fetchSmilesByAc(manualAc, idx)
-                        fetchGlycanImage(manualAc, idx)
+                    onClick={() => {
+                        handleSeqChange(idx, "entityType", "ligand")
+                         handleSeqChange(idx, 'id', manualAc[idx]); 
+                        fetchSmilesByAc(manualAc[idx], idx)
+                        fetchGlycanImage(manualAc[idx], idx)
                     }}
                   >
                     Get SMILES
@@ -416,12 +430,12 @@ const removeConstraint = idx => setConstraints(constraints.filter((_, i) => i !=
     )}
                 {manualSmiles && (
                   <div style={{ color: 'green', fontSize: 12, marginTop: 4 }}>
-                    SMILES: {manualSmiles}
+                    SMILES: {manualSmiles[idx]}
                   </div>
                 )}
                 {manualError && (
                   <div style={{ color: 'red', fontSize: 12, marginTop: 4 }}>
-                    {manualError}
+                    {manualError[idx]}
                   </div>
                 )}
               </>

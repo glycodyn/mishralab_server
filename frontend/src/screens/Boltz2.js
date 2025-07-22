@@ -134,7 +134,7 @@ const handleSubmit = async (e) => {
   } else {
    
   const yamlSequences = sequences
-  .filter(seq => seq.entityType && seq.id) // Only require entityType and id
+  .filter(seq => seq.entityType && seq.id) 
   .map(seq => {
     const { entityType, ...rest } = seq;
     const clean = Object.fromEntries(
@@ -143,18 +143,18 @@ const handleSubmit = async (e) => {
         v !== undefined && 
         v !== null &&
         !(Array.isArray(v) && v.length === 0) &&
-        !(typeof v === 'boolean' && v === false && k !== 'cyclic') // Keep cyclic if explicitly false
+        !(typeof v === 'boolean' && v === false && k !== 'cyclic') 
       )
     );
     
-    // Special handling for ligands - ensure we keep either smiles or ccd
+
     if (entityType === 'ligand' && !clean.smiles && !clean.ccd) {
-      return null; // Skip invalid ligands
+      console.log("Skipping invalid ligand:", clean.smiles, clean.ccd);
+      return null;
     }
     
     return { [entityType]: clean };
-  })
-  .filter(Boolean);
+  }).filter(Boolean);
 const yamlTemplates = templates
   .map(t => {
     let entry = {};
@@ -169,10 +169,8 @@ const yamlTemplates = templates
         ? t.template_id.split(',').map(s => s.trim()).filter(Boolean)
         : t.template_id.trim();
     }
-    // Only include if at least one field is present
     return Object.keys(entry).length > 0 ? entry : null;
-  })
-  .filter(Boolean);
+  }).filter(Boolean);
 
 const yamlConstraints = constraints
   .map(c => {
@@ -186,8 +184,7 @@ const yamlConstraints = constraints
       return { contact: { token1: c.token1.split(',').map(s => s.trim()).filter(Boolean), token2: c.token2.split(',').map(s => s.trim()).filter(Boolean), max_distance: c.max_distance } };
     }
     return null;
-  })
-  .filter(Boolean);
+  }).filter(Boolean);
 
 const yamlProperties = properties
   .map(p => {
@@ -195,8 +192,7 @@ const yamlProperties = properties
       return { affinity: { binder: p.binder } };
     }
     return null;
-  })
-  .filter(Boolean);
+  }).filter(Boolean);
 
     const yamlObj = {
       version: 1,
@@ -217,8 +213,6 @@ const yamlProperties = properties
   formData.append('email', email);
   formData.append('userId', userId);
   formData.append('jobTitle', jobTitle);
-
-  // --- Attach template files ---
   templates.forEach((t, i) => {
     if (t.file) formData.append(`templateFile${i}`, t.file);
   });

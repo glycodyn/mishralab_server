@@ -103,7 +103,7 @@ const DockingResultPage = () => {
         console.log("Parsed row:", parsed);
         data.push(parsed);
       } else {
-        console.log("❌ No match Vina row:", line);
+        console.log("No match Vina row:", line);
       }
     }
     return data;
@@ -112,7 +112,6 @@ const DockingResultPage = () => {
   const showLigand = (index) => {
     ligandComponents.forEach((comp, i) => comp.setVisibility(i === index));
     setCurrentIndex(index);
-    //ligandComponents[index]?.autoView(true);
   };
   
   function cleanPDBQTText(text) {
@@ -168,7 +167,7 @@ const DockingResultPage = () => {
       
           stage.autoView();
         } catch (err) {
-          console.error('❌ Error loading blobs into NGL:', err);
+          console.error('Error loading blobs into NGL:', err);
         }
       };
   

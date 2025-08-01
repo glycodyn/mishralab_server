@@ -7,7 +7,6 @@ const util = require('util');
 const router = express.Router();
 
 const exec = util.promisify(require('child_process').exec);
-//const { stdout, stderr } = await exec(command);
 
 const UPLOAD_FOLDER = path.join(__dirname, '../uploads/docking');
 const OUTPUT_FOLDER = path.join(__dirname, '../uploads/results');
@@ -38,7 +37,7 @@ const multiUpload = upload.fields([
           return res.status(400).json({ success: false, message: 'No file uploaded' });
       }
   
-      console.log('✅ File uploaded:', req.file.path);
+      console.log('File uploaded:', req.file.path);
       res.status(200).json({
           success: true,
           message: 'File uploaded successfully',
@@ -46,64 +45,7 @@ const multiUpload = upload.fields([
       });
   });
   
-// Helper function : AutoDock Vina
-// async function runAutoDockVina(receptorPath, ligandPath, configPath, outputPath) {
-//     return new Promise((resolve, reject) => {
-//         // Absolute path to vina.exe inside your project
-//         const vinaExecutable = path.join(__dirname, '../../Vina/vina.exe');          
-//         const vina = spawn(vinaExecutable, [
-//             '--receptor', receptorPath,
-//             '--ligand', ligandPath,
-//             '--config', configPath,
-//             '--out', outputPath
-//         ]);
-        
-//         //Tracking
-
-//         console.log("vinaExecutable:", vinaExecutable); 
-//         console.log("Running Vina with:");
-//         console.log("Receptor:", receptorPath);
-//         console.log("Ligand:", ligandPath);
-//         console.log("Config:", configPath);
-//         console.log("Output:", outputPath);
-//         vina.on('error', (err) => {
-//             console.error("Failed to start Vina process:", err.message);
-//           });         
-
-//         let stdout = '';
-//         let stderr = '';
-
-//         vina.stdout.on('data', (data) => {
-//             const msg = data.toString();
-//             stdout += msg;
-//             console.log(`[VINA STDOUT] ${msg}`);
-//         });
-        
-//         vina.stderr.on('data', (data) => {
-//             const msg = data.toString();
-//             stderr += msg;
-//             console.error(`[VINA STDERR] ${msg}`);
-//         });        
-
-//         vina.on('close', (code) => {
-//             console.log("🧬 Full Vina stdout:\n" + stdout)
-//             if (code !== 0) {
-//                 reject(new Error(`AutoDock Vina exited with code ${code}: ${stderr}`));
-//             } else {
-//                 // Extract only the score table
-//                 const scoreStart = stdout.indexOf("mode |   affinity");
-//                 const scoreTable = scoreStart !== -1 ? stdout.slice(scoreStart).trim() : "Affinity data not found.";
-
-//                 resolve({
-//                     output: stdout + '\n' + stderr,
-//                     scoreTable: scoreTable
-//                 });
-//             }
-//         });
-//     });
-// }
-
-//updated for docker usage
+//Helper functions for Vina and GlycoTorchVina and Vina-Carb
 async function runAutoDockVina(receptorPath, ligandPath, configPath, outputPath) {
   return new Promise(async (resolve, reject) => {
     const command = `docker run --rm -v "${path.dirname(receptorPath)}:/data" -v "${path.dirname(outputPath)}:/output" vina-test ` +
@@ -112,7 +54,7 @@ async function runAutoDockVina(receptorPath, ligandPath, configPath, outputPath)
       `--config "/data/${path.basename(configPath)}" ` +
       `--out "/output/${path.basename(outputPath)}"`;
 
-    console.log('🚀 Running AutoDock Vina (Docker) with:', command);
+    console.log('Running AutoDock Vina (Docker) with:', command);
 
     try {
       const { stdout, stderr } = await exec(command);
@@ -129,7 +71,7 @@ async function runAutoDockVina(receptorPath, ligandPath, configPath, outputPath)
   });
 }
 
-// Updated GlycoTorchVina: Docker version
+
 async function runGlycoTorchVina(receptorPath, ligandPath, configPath, outputPath, chiCoeff = 1, chiCutoff = 0) {
   return new Promise(async (resolve, reject) => {
     const command = `docker run --rm -v "${path.dirname(receptorPath)}:/data" -v "${path.dirname(outputPath)}:/output" glyco-test ` +
@@ -139,7 +81,7 @@ async function runGlycoTorchVina(receptorPath, ligandPath, configPath, outputPat
       `--out "/output/${path.basename(outputPath)}" ` +
       `--chi_coeff ${chiCoeff} --chi_cutoff ${chiCutoff}`;
 
-    console.log('🚀 Running GlycoTorchVina (Docker) with:', command);
+    console.log('Running GlycoTorchVina (Docker) with:', command);
 
     try {
       const { stdout, stderr } = await exec(command);
@@ -156,58 +98,6 @@ async function runGlycoTorchVina(receptorPath, ligandPath, configPath, outputPat
   });
 }
 
-
-// Helper function : Glycotorch Vina
-// async function runGlycoTorchVina(receptorPath, ligandPath, configPath, outputPath, chiCoeff = 1, chiCutoff = 0) {
-//   return new Promise((resolve, reject) => {
-//     const vinaExecutable = path.join(__dirname, '../../Vina/GlycoTorchVina.exe');
-//       const vina = spawn(vinaExecutable, [
-//           '--receptor', receptorPath,
-//           '--ligand', ligandPath,
-//           '--config', configPath,
-//           '--out', outputPath,
-//           '--chi_coeff', String(chiCoeff),
-//           '--chi_cutoff', String(chiCutoff)
-//       ]);
-
-//       console.log("Running GlycoTorch Vina:");
-//       console.log("Receptor:", receptorPath);
-//       console.log("Ligand:", ligandPath);
-//       console.log("Config:", configPath);
-//       console.log("Chi Coeff:", chiCoeff);
-//       console.log("Chi Cutoff:", chiCutoff);
-
-//       let stdout = '';
-//       let stderr = '';
-
-//       vina.stdout.on('data', (data) => {
-//           const msg = data.toString();
-//           stdout += msg;
-//           console.log(`[GLYCO STDOUT] ${msg}`);
-//       });
-
-//       vina.stderr.on('data', (data) => {
-//           const msg = data.toString();
-//           stderr += msg;
-//           console.error(`[GLYCO STDERR] ${msg}`);
-//       });
-
-//       vina.on('close', (code) => {
-//           console.log("🧬 Full GlycoTorch stdout:\n" + stdout);
-//           if (code !== 0) {
-//               reject(new Error(`GlycoTorch Vina exited with code ${code}: ${stderr}`));
-//           } else {
-//               const scoreStart = stdout.indexOf("mode |   affinity");
-//               const scoreTable = scoreStart !== -1 ? stdout.slice(scoreStart).trim() : "Affinity data not found.";
-//               resolve({
-//                   output: stdout + '\n' + stderr,
-//                   scoreTable: scoreTable
-//               });
-//           }
-//       });
-//   });
-// }
-// Helper function :Vina Carb
 async function runVinaCarb(receptorPath, ligandPath, configPath, outputPath) {
   return new Promise(async (resolve, reject) => {
     const command = `docker run -v "${path.dirname(receptorPath)}:/data" -v "${path.dirname(outputPath)}:/output" vina-carb-test ./vina-carb ` +
@@ -216,7 +106,7 @@ async function runVinaCarb(receptorPath, ligandPath, configPath, outputPath) {
       `--config "/data/${path.basename(configPath)}" ` +
       `--out "/output/${path.basename(outputPath)}"`;
 
-    console.log('🚀 Running Vina-Carb with:', command);
+    console.log('Running Vina-Carb with:', command);
 
     try {
       const { stdout, stderr } = await exec(command);
@@ -233,7 +123,7 @@ async function runVinaCarb(receptorPath, ligandPath, configPath, outputPath) {
     }
   });
 }
-
+//Routes
 
 router.post('/dock', async (req, res) => {
     try {
@@ -411,7 +301,7 @@ router.post('/dock-carb', async (req, res) => {
       });
   
     } catch (error) {
-      console.error('❌ Vina-Carb error:', error);
+      console.error('Vina-Carb error:', error);
       res.status(500).json({
         success: false,
         message: 'Error running Vina-Carb',
@@ -427,7 +317,7 @@ router.get('/view', (req, res) => {
     }
 
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'text/plain'); // So NGL can parse it
+    res.setHeader('Content-Type', 'text/plain');
     res.sendFile(path.resolve(filePath));
   });
   

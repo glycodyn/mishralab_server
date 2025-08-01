@@ -47,14 +47,13 @@ function Dashboard() {
       title: "GlyDockStudio",
       description: "Predict how glycans bind to protein targets using specialized docking tools for glycoscience research and drug development.",
       icon: "🔮",
-      link: "#",
+      link: "/DockingViewer",
       features: [
         "Accurate glycan docking to protein binding sites",
         "Estimation of binding affinities",
         "Visualization of predicted glycan-protein complexes",
         "Support for flexible glycan and protein conformations"
-      ],
-      comingSoon: true
+      ]
     }
   ];
 

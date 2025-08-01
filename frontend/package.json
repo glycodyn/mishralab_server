@@ -8,12 +8,9 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "3dmol": "^2.4.2",
-<<<<<<< HEAD
-    "ngl": "^2.4.0",
-=======
     "bootstrap": "^5.3.7",
+    "buffer": "^6.0.3",
     "js-yaml": "^4.1.0",
->>>>>>> 006ac296700e3b74b726173b4d3a8041265f5c33
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",

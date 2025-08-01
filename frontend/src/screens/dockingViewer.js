@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Shape } from 'ngl';
-import '../styles/dockingViewer.css';
+import '../styles/DockingViewer.css';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -193,7 +193,7 @@ energy_range = ${energyRange}
 
   const runDocking = async () => {
     if (!uploadedReceptor || !uploadedLigand) {
-      alert("❗ Please upload both receptor and ligand files before running docking.");
+      alert("Please upload both receptor and ligand files before running docking.");
       return;
     }
 
@@ -207,7 +207,7 @@ energy_range = ${energyRange}
       formData.append("ligand", uploadedLigand);
       formData.append("config", configFile);
 
-      console.log("🧬 FormData Preview:");
+      console.log("FormData Preview:");
       for (let [key, value] of formData.entries()) {
         console.log(`${key}:`, value);
       }
@@ -234,7 +234,7 @@ energy_range = ${energyRange}
       navigate("/run-docking", {
         state: {
           loading: false,
-          log: "❌ Request failed: " + err.message,
+          log: "Request failed: " + err.message,
           scoreTable: "",
           isPureVina: true,
         },
@@ -243,7 +243,7 @@ energy_range = ${energyRange}
   };
   const runGlycoTorchDocking = async () => {
     if (!uploadedReceptor || !uploadedLigand) {
-      alert("❗ Please upload both receptor and ligand files before running GlycoTorch docking.");
+      alert("Please upload both receptor and ligand files before running GlycoTorch docking.");
       return;
     }
   
@@ -383,11 +383,10 @@ energy_range = ${energyRange}
       </div>
 
       <div className="viewer-wrapper">
-      <div className="ngl-wrapper">
-        <div className="ngl-viewer" ref={viewerDiv}></div>
-        <div className="hover-info-box">{hoverCoords}</div>
-      </div>
-
+        <div className="ngl-wrapper">
+          <div className="ngl-viewer" ref={viewerDiv}></div>
+          <div className="hover-info-box">{hoverCoords}</div>
+        </div>
 
         <div className="button-panel">
           <button onClick={runDocking}>AutoDock Vina</button>
@@ -395,18 +394,18 @@ energy_range = ${energyRange}
           <button onClick={runGlycoTorchDocking}>GlycoTorch Vina</button>
 
           <div className="vina-params">
-          <label>Exhaustiveness:</label>
-          <input type="number" value={exhaustiveness} onChange={(e) => setExhaustiveness(+e.target.value)} />
-          <label>Num Modes:</label>
-          <input type="number" value={numModes} onChange={(e) => setNumModes(+e.target.value)} />
-          <label>Energy Range:</label>
-          <input type="number" value={energyRange} onChange={(e) => setEnergyRange(+e.target.value)} />
-          
-          <label>Chi Coeff (Glycotorch only):</label>
-          <input type="number" value={chiCoeff} onChange={(e) => setChiCoeff(+e.target.value)} />
-          <label>Chi Cutoff (Glycotorch only):</label>
-          <input type="number" value={chiCutoff} onChange={(e) => setChiCutoff(+e.target.value)} />
-        </div>
+            <label>Exhaustiveness:</label>
+            <input type="number" value={exhaustiveness} onChange={(e) => setExhaustiveness(+e.target.value)} />
+            <label>Num Modes:</label>
+            <input type="number" value={numModes} onChange={(e) => setNumModes(+e.target.value)} />
+            <label>Energy Range:</label>
+            <input type="number" value={energyRange} onChange={(e) => setEnergyRange(+e.target.value)} />
+            
+            <label>Chi Coeff (Glycotorch only):</label>
+            <input type="number" value={chiCoeff} onChange={(e) => setChiCoeff(+e.target.value)} />
+            <label>Chi Cutoff (Glycotorch only):</label>
+            <input type="number" value={chiCutoff} onChange={(e) => setChiCutoff(+e.target.value)} />
+          </div>
         </div>
       </div>
     </div>
